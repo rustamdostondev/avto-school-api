@@ -17,7 +17,7 @@ COPY yarn.lock ./
 
 # Install dependencies
 RUN npm cache clean --force
-RUN npm install --legacy-peer-deps
+RUN npm install --legacy-peer-deps --ignore-scripts
 
 # Copy prisma schema first
 COPY prisma ./prisma
@@ -50,7 +50,7 @@ COPY yarn.lock ./
 
 # Install only production dependencies
 RUN npm cache clean --force
-RUN npm install
+RUN npm install --ignore-scripts
 
 # Copy prisma schema
 COPY prisma ./prisma
