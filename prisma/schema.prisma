@@ -1,0 +1,455 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Users {
+  id                  String    @id @default(uuid()) @db.Uuid
+  fullName            String    @map("full_name") @db.VarChar(1024)
+  password            String?   @db.VarChar(1024) // Make optional for OAuth users
+  email               String    @unique @db.VarChar(1024)
+  isVerified          Boolean   @default(false) @map("is_verified")
+  lastLoginAt         DateTime? @map("last_login_at") @db.Timestamptz
+  isDeleted           Boolean   @default(false) @map("is_deleted")
+  role                String    @default("user") @map("role") @db.VarChar(1024) // user, admin, super_admin
+  verificationAttempt Int       @default(0) @map("verification_attempt")
+  blockedAt           DateTime? @map("blocked_at") @db.Timestamptz
+
+  // OAuth fields
+  provider   String? @db.VarChar(50) // 'local', 'google', 'facebook', etc.
+  providerId String? @map("provider_id") @db.VarChar(255) // OAuth provider user ID
+  authMethod String  @default("local") @map("auth_method") @db.VarChar(50) // 'local', 'oauth'
+
+  // Timestamps
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+
+  // User IDs
+  deletedBy String? @map("deleted_by") @db.Uuid
+  createdBy String? @map("created_by") @db.Uuid
+  updatedBy String? @map("updated_by") @db.Uuid
+
+  // Relations
+  refreshTokens   RefreshToken[]
+  userSessions    UserSessions[]
+  downloadHistory DownloadHistory[]
+  userRoles       UserRoles[]
+  userPermissions UserPermissions[]
+  jobs            Jobs[]
+  processingSteps ProcessingSteps[]
+  oneTimeCodes    OneTimeCodes[]
+
+  @@unique([provider, providerId]) // Ensure unique provider + providerId combination
+  // Indexes for better performance
+  @@index([email])
+  @@index([provider, providerId])
+  @@index([authMethod])
+  @@map("users")
+}
+
+model Roles {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String  @unique @db.VarChar(1024)
+  description String? @db.VarChar(1024)
+  isDeleted   Boolean @default(false) @map("is_deleted")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // User IDs
+  deletedById String? @map("deleted_by") @db.Uuid
+  createdById String? @map("created_by") @db.Uuid
+  updatedById String? @map("updated_by") @db.Uuid
+
+  // Relations
+  rolePermissions RolePermissions[]
+  userRoles       UserRoles[]
+
+  @@map("roles")
+}
+
+model Permissions {
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String  @unique @db.VarChar(1024)
+  description String? @db.VarChar(1024)
+  resource    String  @db.VarChar(1024)
+  action      String  @db.VarChar(1024)
+  isDeleted   Boolean @default(false) @map("is_deleted")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // User IDs
+  deletedById String? @map("deleted_by") @db.Uuid
+  createdById String? @map("created_by") @db.Uuid
+  updatedById String? @map("updated_by") @db.Uuid
+
+  // Relations
+  rolePermissions RolePermissions[]
+  userPermissions UserPermissions[]
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+model RolePermissions {
+  id           String  @id @default(uuid()) @db.Uuid
+  roleId       String  @map("role_id") @db.Uuid
+  permissionId String  @map("permission_id") @db.Uuid
+  isDeleted    Boolean @default(false) @map("is_deleted")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // User IDs
+  deletedById String? @map("deleted_by") @db.Uuid
+  createdById String? @map("created_by") @db.Uuid
+  updatedById String? @map("updated_by") @db.Uuid
+
+  // Relations
+  roles       Roles       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissions Permissions @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRoles {
+  id        String  @id @default(uuid()) @db.Uuid
+  userId    String  @map("user_id") @db.Uuid
+  roleId    String  @map("role_id") @db.Uuid
+  isDeleted Boolean @default(false) @map("is_deleted")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // User IDs
+  deletedById String? @map("deleted_by") @db.Uuid
+  createdById String? @map("created_by") @db.Uuid
+  updatedById String? @map("updated_by") @db.Uuid
+
+  // Relations
+  users Users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roles Roles @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model UserPermissions {
+  id           String  @id @default(uuid()) @db.Uuid
+  userId       String  @map("user_id") @db.Uuid
+  permissionId String  @map("permission_id") @db.Uuid
+  isDeleted    Boolean @default(false) @map("is_deleted")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // User IDs
+  deletedById String? @map("deleted_by") @db.Uuid
+  createdById String? @map("created_by") @db.Uuid
+  updatedById String? @map("updated_by") @db.Uuid
+
+  // Relations
+  users       Users       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permissions Permissions @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permissionId])
+  @@map("user_permissions")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique @db.VarChar(1024)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
+  isDeleted Boolean  @default(false) @map("is_deleted")
+
+  // Relations
+  userId String @map("user_id") @db.Uuid
+  user   Users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+
+  // User IDs
+  deletedBy String? @map("deleted_by") @db.Uuid
+  createdBy String? @map("created_by") @db.Uuid
+  updatedBy String? @map("updated_by") @db.Uuid
+
+  @@map("refresh_tokens")
+}
+
+model UserSessions {
+  id           String   @id @default(uuid()) @db.Uuid
+  sessionId    String   @map("session_id") @db.VarChar(1024)
+  isActive     Boolean  @default(true) @map("is_active")
+  lastActivity DateTime @map("last_activity") @db.Timestamptz
+  userAgent    String?  @map("user_agent") @db.VarChar(1024)
+  ipAddress    String?  @map("ip_address") @db.VarChar(1024)
+  isDeleted    Boolean  @default(false) @map("is_deleted")
+
+  // Timestamps
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+
+  // User IDs
+  deletedBy String? @map("deleted_by") @db.Uuid
+  createdBy String? @map("created_by") @db.Uuid
+  updatedBy String? @map("updated_by") @db.Uuid
+
+  // Relations
+  userId String @map("user_id") @db.Uuid
+  users  Users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
+}
+
+model DownloadHistory {
+  id        String  @id @default(uuid()) @db.Uuid
+  userId    String? @map("user_id") @db.Uuid
+  fileId    String? @map("file_id") @db.Uuid
+  isDeleted Boolean @default(false) @map("is_deleted")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  users Users? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  files Files? @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@map("download_history")
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Jobs {
+  id       String    @id @default(uuid()) @db.Uuid
+  type     String    @db.VarChar(100) // JobType enum values
+  status   JobStatus @default(PENDING)
+  payload  Json // Job data payload
+  result   Json? // Job result data
+  progress Json? // Job progress information
+  metadata Json? // Additional metadata
+  userId   String    @map("user_id") @db.Uuid
+
+  // Timestamps
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  startedAt   DateTime? @map("started_at") @db.Timestamptz
+  completedAt DateTime? @map("completed_at") @db.Timestamptz
+
+  // Relations
+  user            Users             @relation(fields: [userId], references: [id])
+  ProcessingSteps ProcessingSteps[]
+
+  @@map("jobs")
+}
+
+enum ProcessingStepType {
+  WEBSITE_LOADING
+}
+
+enum ProcessingStepStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model ProcessingSteps {
+  id         String               @id @default(uuid()) @db.Uuid
+  jobId      String?              @map("job_id") @db.Uuid
+  workerId   String?              @map("worker_id") @db.Uuid
+  type       ProcessingStepType
+  status     ProcessingStepStatus
+  stepNumber Int                  @default(1)
+  data       Json?
+
+  userId    String  @map("user_id") @db.Uuid
+  isDeleted Boolean @default(false) @map("is_deleted")
+
+  // Timestamps
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  startedAt   DateTime? @map("started_at") @db.Timestamptz
+  completedAt DateTime? @map("completed_at") @db.Timestamptz
+
+  // Relations
+  user Users @relation(fields: [userId], references: [id])
+  job  Jobs? @relation(fields: [jobId], references: [id])
+
+  @@map("processing_steps")
+}
+
+model OneTimeCodes {
+  id        String   @id @default(uuid()) @db.Uuid
+  otp       String   @db.VarChar(6)
+  code      String   @unique @db.VarChar(64)
+  expiredAt DateTime @db.Timestamptz
+  isDeleted Boolean  @default(false)
+  email     String   @db.VarChar(1024)
+
+  userId String @map("user_id") @db.Uuid
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // User IDs
+  deletedBy String? @map("deleted_by") @db.Uuid
+  createdBy String? @map("created_by") @db.Uuid
+  updatedBy String? @map("updated_by") @db.Uuid
+
+  // Relations
+  users Users @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("one_time_codes")
+}
+
+// Simple Quiz System Models (based on your existing data structure)
+model Files {
+  id         String  @id @default(uuid()) @db.Uuid
+  type       String  @db.VarChar(255)
+  name       String  @db.VarChar()
+  size       Int     @db.Integer
+  bucketName String  @map("bucket_name") @db.VarChar(255)
+  path       String? @map("path")
+  isDeleted  Boolean @default(false) @map("is_deleted")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // User IDs
+  deletedById String? @map("deleted_by") @db.Uuid
+  createdById String? @map("created_by") @db.Uuid
+  updatedById String? @map("updated_by") @db.Uuid
+
+  //Relations
+  downloadHistory DownloadHistory[]
+  questions       Questions[]
+
+  @@map("files")
+}
+
+model Subjects {
+  id        String  @id @default(uuid()) @db.Uuid
+  name      Json
+  isDeleted Boolean @default(false) @map("is_deleted")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // User IDs
+  deletedBy String?     @map("deleted_by") @db.Uuid
+  createdBy String?     @map("created_by") @db.Uuid
+  updatedBy String?     @map("updated_by") @db.Uuid
+  questions Questions[]
+
+  @@map("subjects")
+}
+
+model Tickets {
+  id        String  @id @default(uuid()) @db.Uuid
+  name      String? @db.VarChar(255) // Bilet nomi (ixtiyoriy)
+  isDeleted Boolean @default(false) @map("is_deleted")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // User IDs
+  deletedBy String? @map("deleted_by") @db.Uuid
+  createdBy String? @map("created_by") @db.Uuid
+  updatedBy String? @map("updated_by") @db.Uuid
+
+  // Relations
+  questions Questions[]
+
+  @@map("tickets")
+}
+
+model Questions {
+  id                 String  @id @default(uuid()) @db.Uuid
+  ticketId           String  @map("ticket_id") @db.Uuid
+  subjectId          String  @map("subject_id") @db.Uuid
+  title              Json // {"oz": "...", "uz": "...", "ru": "..."}
+  fileId             String? @map("file_id") @db.Uuid
+  correctAnswerIndex Int     @default(2) @map("correct_answer_index")
+  isDeleted          Boolean @default(false) @map("is_deleted")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // User IDs
+  deletedBy String? @map("deleted_by") @db.Uuid
+  createdBy String? @map("created_by") @db.Uuid
+  updatedBy String? @map("updated_by") @db.Uuid
+
+  // Relations
+  ticket  Tickets   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  subject Subjects  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  file    Files?    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  answers Answers[]
+
+  @@map("questions")
+}
+
+model Answers {
+  id         String  @id @default(uuid()) @db.Uuid
+  questionId String  @map("question_id") @db.Uuid
+  isCorrect  Boolean @default(false) @map("is_correct")
+  title      Json // {"oz": "...", "uz": "...", "ru": "..."}
+  isDeleted  Boolean @default(false) @map("is_deleted")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // User IDs
+  deletedBy String? @map("deleted_by") @db.Uuid
+  createdBy String? @map("created_by") @db.Uuid
+  updatedBy String? @map("updated_by") @db.Uuid
+
+  // Relations
+  question Questions @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("answers")
+}

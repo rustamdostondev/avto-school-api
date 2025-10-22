@@ -1,0 +1,32 @@
+export const ErrorCodes = {
+  // System Errors (SYS_XXX)
+  INTERNAL_SERVER_ERROR: 'SYS_001',
+  SERVICE_UNAVAILABLE: 'SYS_002',
+  BAD_GATEWAY: 'SYS_003',
+
+  // Authentication Errors (AUTH_XXX)
+  UNAUTHORIZED: 'AUTH_001',
+  INVALID_CREDENTIALS: 'AUTH_002',
+  TOKEN_EXPIRED: 'AUTH_003',
+  INVALID_TOKEN: 'AUTH_004',
+  REFRESH_TOKEN_NOT_FOUND: 'AUTH_005',
+
+  // User Errors (USER_XXX)
+  USER_NOT_FOUND: 'USER_001',
+  USER_EMAIL_EXISTS: 'USER_002',
+  USER_INACTIVE: 'USER_003',
+  USER_NOT_VERIFIED: 'USER_004',
+
+  // Database Errors (DB_XXX)
+  DATABASE_ERROR: 'DB_001',
+  DATABASE_CONNECTION_ERROR: 'DB_002',
+  QUERY_FAILED: 'DB_003',
+  DUPLICATE_ENTRY: 'DB_004',
+
+  // Business Errors (BUS_XXX)
+  VALIDATION_ERROR: 'BUS_001',
+  INVALID_OPERATION: 'BUS_002',
+  RESOURCE_NOT_FOUND: 'BUS_003',
+} as const;
+
+export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];

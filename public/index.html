@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>RAG Chat</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        background: #f3f4f6;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .chat-container {
+        width: 100%;
+        max-width: 700px;
+        height: 90vh;
+        background: #fff;
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+      }
+
+      .chat-header {
+        padding: 12px 20px;
+        background: #4f46e5;
+        color: #fff;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .chat-messages {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background: #fafafa;
+      }
+
+      .message {
+        margin-bottom: 15px;
+        display: flex;
+      }
+
+      .message.user {
+        justify-content: flex-end;
+      }
+
+      .bubble {
+        padding: 12px 16px;
+        border-radius: 18px;
+        max-width: 75%;
+        line-height: 1.4;
+        word-wrap: break-word;
+      }
+
+      .user .bubble {
+        background: #4f46e5;
+        color: #fff;
+        border-bottom-right-radius: 4px;
+      }
+
+      .bot .bubble {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+      }
+
+      .chat-input-container {
+        padding: 12px;
+        border-top: 1px solid #eee;
+        background: #fff;
+      }
+
+      .input-row {
+        display: flex;
+        gap: 10px;
+      }
+
+      textarea {
+        flex: 1;
+        resize: none;
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid #ddd;
+        font-size: 14px;
+        line-height: 1.4;
+        outline: none;
+        max-height: 150px;
+        overflow-y: auto;
+      }
+
+      button {
+        padding: 0 20px;
+        border: none;
+        border-radius: 12px;
+        background: #4f46e5;
+        color: white;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+        transition: background 0.2s;
+      }
+
+      button:hover {
+        background: #4338ca;
+      }
+
+      /* Settings dropdown (minimal style) */
+      .settings {
+        position: absolute;
+        top: 12px;
+        right: 20px;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 10px;
+        font-size: 13px;
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .settings input,
+      .settings select {
+        padding: 4px 6px;
+        font-size: 13px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+      }
+
+      .settings-toggle {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: #fff;
+        padding: 6px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      .chat-header {
+        position: relative;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chat-container">
+      <div class="chat-header">
+        <span>🤖 RAG Chat</span>
+        <button class="settings-toggle">⚙️</button>
+        <div class="settings" id="settings">
+          <label
+            >Collection:
+            <select id="collectionName">
+              <option value="">default</option>
+              <option value="documents">documents</option>
+              <option value="websites">websites</option>
+              <option value="06ea0183-5279-46e2-8170-055430b3c800">UUID Collection</option>
+            </select>
+          </label>
+          <label
+            >Context Limit:
+            <input type="number" id="contextLimit" value="3" min="1" max="10" />
+          </label>
+          <label
+            >Temperature:
+            <input type="number" id="temperature" value="0.7" min="0" max="2" step="0.1" />
+          </label>
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chatMessages"></div>
+
+      <div class="chat-input-container">
+        <div class="input-row">
+          <textarea id="messageInput" rows="1" placeholder="Type your message..."></textarea>
+          <button id="sendButton">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      class RAGChat {
+        constructor() {
+          this.chatMessages = document.getElementById('chatMessages');
+          this.messageInput = document.getElementById('messageInput');
+          this.sendButton = document.getElementById('sendButton');
+          this.apiBaseUrl = 'http://localhost:3000/api/v1';
+
+          // Settings toggle
+          document.querySelector('.settings-toggle').onclick = () => {
+            const s = document.getElementById('settings');
+            s.style.display = s.style.display === 'flex' ? 'none' : 'flex';
+          };
+
+          // Auto expand textarea
+          this.messageInput.addEventListener('input', () => {
+            this.messageInput.style.height = 'auto';
+            this.messageInput.style.height = this.messageInput.scrollHeight + 'px';
+          });
+
+          this.sendButton.addEventListener('click', () => this.sendMessage());
+          this.messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              this.sendMessage();
+            }
+          });
+        }
+
+        addMessage(content, sender) {
+          const div = document.createElement('div');
+          div.className = 'message ' + sender;
+          const bubble = document.createElement('div');
+          bubble.className = 'bubble';
+          bubble.innerHTML = sender === 'bot' ? content : this.escape(content);
+          div.appendChild(bubble);
+          this.chatMessages.appendChild(div);
+          this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+          return bubble;
+        }
+
+        escape(str) {
+          return str.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+        }
+
+        async sendMessage() {
+          const message = this.messageInput.value.trim();
+          if (!message) return;
+          this.addMessage(message, 'user');
+          this.messageInput.value = '';
+          this.messageInput.style.height = 'auto';
+
+          const botBubble = this.addMessage('', 'bot');
+
+          const collectionName = document.getElementById('collectionName').value || undefined;
+          const contextLimit = parseInt(document.getElementById('contextLimit').value) || 3;
+          const temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
+
+          const response = await fetch(`${this.apiBaseUrl}/langchain/asking/stream`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: message, collectionName, contextLimit, temperature }),
+          });
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let fullText = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            fullText += decoder.decode(value, { stream: true });
+            botBubble.innerHTML = marked.parse(fullText);
+            this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+          }
+        }
+      }
+
+      new RAGChat();
+    </script>
+  </body>
+</html>
