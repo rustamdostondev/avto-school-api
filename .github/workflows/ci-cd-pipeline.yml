@@ -64,7 +64,6 @@ jobs:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.SSH_PORT }}
           script: |
             cd ../home/devops/deployment/avto-school
             docker pull ${{ secrets.DOCKER_USERNAME }}/${{ github.event.repository.name }}:latest
