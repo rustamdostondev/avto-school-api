@@ -7,6 +7,8 @@ RUN apk add --no-cache \
     g++ \
     openssl
 
+ENV HUSKY=0
+
 WORKDIR /usr/src/app
 
 # Copy package files
@@ -38,6 +40,7 @@ RUN apk add --no-cache \
 
 ARG NODE_ENV=production
 ENV NODE_ENV=${NODE_ENV}
+ENV HUSKY=0
 
 WORKDIR /usr/src/app
 
