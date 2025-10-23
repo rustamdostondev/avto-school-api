@@ -72,6 +72,8 @@ async function main() {
         isVerified: true,
         lastLoginAt: new Date(),
         role: ROLES.USER,
+        accessStartAt: new Date(), // Hozirdan boshlab
+        accessEndAt: new Date(Date.now() + 5 * 30 * 24 * 60 * 60 * 1000), // 5 oy (150 kun)
       },
     }),
   ]);

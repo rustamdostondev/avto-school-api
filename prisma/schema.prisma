@@ -18,6 +18,8 @@ model Users {
   fullName            String    @map("full_name") @db.VarChar(1024)
   password            String?   @db.VarChar(1024) // Make optional for OAuth users
   email               String    @unique @db.VarChar(1024)
+  accessStartAt       DateTime? @default(now()) @map("access_start_at") @db.Timestamptz
+  accessEndAt         DateTime? @map("access_end_at") @db.Timestamptz
   isVerified          Boolean   @default(false) @map("is_verified")
   lastLoginAt         DateTime? @map("last_login_at") @db.Timestamptz
   isDeleted           Boolean   @default(false) @map("is_deleted")

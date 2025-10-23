@@ -5,6 +5,7 @@ export interface IUser {
   email: string;
   password?: string;
   fullName?: string;
+  role?: string;
   isVerified?: boolean;
   lastLoginAt?: Date;
   createdAt?: Date;

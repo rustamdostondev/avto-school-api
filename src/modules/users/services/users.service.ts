@@ -6,6 +6,11 @@ import { CustomApiResponse } from '@common/utils/api-response.util';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { IUserSession } from '@modules/auth/interfaces/auth.interface';
+import {
+  SetUserAccessPeriodDto,
+  UpdateUserAccessPeriodDto,
+  UserAccessStatusDto,
+} from '../dto/user-access.dto';
 
 @Injectable()
 export class UsersService {
@@ -176,5 +181,230 @@ export class UsersService {
       },
     });
     return { message: 'User deleted successfully' };
+  }
+
+  async setUserAccessPeriod(data: SetUserAccessPeriodDto, admin: IUserSession) {
+    const user = await this.prisma.users.findUnique({
+      where: { id: data.userId, isDeleted: false },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${data.userId} not found`);
+    }
+
+    if (data.accessStartAt && data.accessEndAt) {
+      const startDate = new Date(data.accessStartAt);
+      const endDate = new Date(data.accessEndAt);
+
+      if (startDate >= endDate) {
+        throw new BadRequestException('Access start date must be before end date');
+      }
+    }
+
+    const updatedUser = await this.prisma.users.update({
+      where: { id: data.userId },
+      data: {
+        accessStartAt: data.accessStartAt ? new Date(data.accessStartAt) : undefined,
+        accessEndAt: data.accessEndAt ? new Date(data.accessEndAt) : undefined,
+        updatedBy: admin.id,
+        updatedAt: new Date(),
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        accessStartAt: true,
+        accessEndAt: true,
+        role: true,
+      },
+    });
+
+    return updatedUser;
+  }
+
+  async updateUserAccessPeriod(
+    userId: string,
+    data: UpdateUserAccessPeriodDto,
+    admin: IUserSession,
+  ) {
+    const user = await this.prisma.users.findUnique({
+      where: { id: userId, isDeleted: false },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const startDate = data.accessStartAt ? new Date(data.accessStartAt) : user.accessStartAt;
+    const endDate = data.accessEndAt ? new Date(data.accessEndAt) : user.accessEndAt;
+
+    if (startDate && endDate && startDate >= endDate) {
+      throw new BadRequestException('Access start date must be before end date');
+    }
+
+    const updatedUser = await this.prisma.users.update({
+      where: { id: userId },
+      data: {
+        ...(data.accessStartAt && { accessStartAt: new Date(data.accessStartAt) }),
+        ...(data.accessEndAt && { accessEndAt: new Date(data.accessEndAt) }),
+        updatedBy: admin.id,
+        updatedAt: new Date(),
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        accessStartAt: true,
+        accessEndAt: true,
+        role: true,
+      },
+    });
+
+    return updatedUser;
+  }
+
+  async checkUserAccess(userId: string): Promise<UserAccessStatusDto> {
+    const user = await this.prisma.users.findUnique({
+      where: { id: userId, isDeleted: false },
+      select: {
+        accessStartAt: true,
+        accessEndAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const currentTime = new Date();
+    const { accessStartAt, accessEndAt } = user;
+
+    if (!accessStartAt && !accessEndAt) {
+      return {
+        hasAccess: true,
+        accessStartAt: null,
+        accessEndAt: null,
+        currentTime,
+        message: 'No access restrictions set',
+      };
+    }
+
+    const hasStartAccess = !accessStartAt || currentTime >= accessStartAt;
+    const hasEndAccess = !accessEndAt || currentTime <= accessEndAt;
+    const hasAccess = hasStartAccess && hasEndAccess;
+
+    let message = '';
+    let daysRemaining: number | undefined;
+
+    if (!hasStartAccess) {
+      const daysUntilStart = Math.ceil(
+        (accessStartAt!.getTime() - currentTime.getTime()) / (1000 * 60 * 60 * 24),
+      );
+      message = `Access will start in ${daysUntilStart} days`;
+    } else if (!hasEndAccess) {
+      message = 'Access period has expired';
+    } else if (accessEndAt) {
+      daysRemaining = Math.ceil(
+        (accessEndAt.getTime() - currentTime.getTime()) / (1000 * 60 * 60 * 24),
+      );
+      message =
+        daysRemaining > 0 ? `Access expires in ${daysRemaining} days` : 'Access expires today';
+    } else {
+      message = 'Access is valid';
+    }
+
+    return {
+      hasAccess,
+      accessStartAt,
+      accessEndAt,
+      currentTime,
+      message,
+      daysRemaining,
+    };
+  }
+
+  async getAllUsersWithAccessPeriods(page: number = 1, limit: number = 10) {
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await Promise.all([
+      this.prisma.users.findMany({
+        where: { isDeleted: false },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          role: true,
+          accessStartAt: true,
+          accessEndAt: true,
+          isVerified: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.users.count({
+        where: { isDeleted: false },
+      }),
+    ]);
+
+    const currentTime = new Date();
+    const usersWithAccessStatus = users.map((user) => {
+      const hasStartAccess = !user.accessStartAt || currentTime >= user.accessStartAt;
+      const hasEndAccess = !user.accessEndAt || currentTime <= user.accessEndAt;
+      const hasAccess = hasStartAccess && hasEndAccess;
+
+      let accessStatus = 'No restrictions';
+      if (!hasStartAccess) {
+        accessStatus = 'Not started';
+      } else if (!hasEndAccess) {
+        accessStatus = 'Expired';
+      } else if (user.accessEndAt) {
+        const daysRemaining = Math.ceil(
+          (user.accessEndAt.getTime() - currentTime.getTime()) / (1000 * 60 * 60 * 24),
+        );
+        accessStatus = `${daysRemaining} days remaining`;
+      } else {
+        accessStatus = 'Active';
+      }
+
+      return {
+        ...user,
+        hasAccess,
+        accessStatus,
+      };
+    });
+
+    return CustomApiResponse.paginated(usersWithAccessStatus, page, limit, total);
+  }
+
+  async removeUserAccessPeriod(userId: string, admin: IUserSession) {
+    const user = await this.prisma.users.findUnique({
+      where: { id: userId, isDeleted: false },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const updatedUser = await this.prisma.users.update({
+      where: { id: userId },
+      data: {
+        accessStartAt: null,
+        accessEndAt: null,
+        updatedBy: admin.id,
+        updatedAt: new Date(),
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        accessStartAt: true,
+        accessEndAt: true,
+        role: true,
+      },
+    });
+
+    return updatedUser;
   }
 }
