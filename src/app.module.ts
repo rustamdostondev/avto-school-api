@@ -14,6 +14,7 @@ import { SubjectsModule } from '@modules/subjects/subjects.module';
 import { TicketsModule } from '@modules/tickets/tickets.module';
 import { QuestionsModule } from '@modules/questions/questions.module';
 import { AnswersModule } from '@modules/answers/answers.module';
+import { ExamsModule } from '@modules/exams/exams.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { AnswersModule } from '@modules/answers/answers.module';
     TicketsModule,
     QuestionsModule,
     AnswersModule,
+    ExamsModule,
   ],
   providers: [GoogleStrategy],
 })
