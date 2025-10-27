@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 
 import { ICreateUserDto, IUpdateUserDto } from '../interfaces/user.interface';
 import { IPagination } from '@common/interfaces/pagination.interface';
@@ -123,9 +124,13 @@ export class UsersService {
       throw new BadRequestException('email already exists');
     }
 
+    // Hash password if provided
+    const hashedPassword = data.password ? await bcrypt.hash(data.password, 10) : undefined;
+
     const user = await this.prisma.users.create({
       data: {
         ...data,
+        password: hashedPassword,
       },
     });
     return user;
@@ -152,13 +157,26 @@ export class UsersService {
       }
     }
 
+    // Hash password if provided
+    const hashedPassword = data.password ? await bcrypt.hash(data.password, 10) : undefined;
+
+    // Prepare update data
+    const updateData: any = {
+      ...data,
+      updatedAt: new Date(),
+      updatedBy: createUser.id,
+    };
+
+    // Only include password if it was provided
+    if (hashedPassword) {
+      updateData.password = hashedPassword;
+    } else {
+      delete updateData.password;
+    }
+
     const user = await this.prisma.users.update({
       where: { id, isDeleted: false },
-      data: {
-        ...data,
-        updatedAt: new Date(),
-        updatedBy: createUser.id,
-      },
+      data: updateData,
     });
     return user;
   }
