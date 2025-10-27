@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Query, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
 import { ExamsService } from '../services/exams.service';
 import { StartExamDto } from '../dto/start-exam.dto';
 import { SubmitExamDto } from '../dto/submit-exam.dto';
@@ -71,34 +71,5 @@ export class ExamsController {
   @RequirePermissions(`${RESOURCES.SUBJECTS}:${PERMISSIONS.READ}`)
   getSubjectExamResults(@Param('subjectId') subjectId: string) {
     return this.examsService.getSubjectExamResults(subjectId);
-  }
-
-  // Admin endpoints
-  @Get('admin/sessions')
-  @ApiOperation({ summary: 'Get all exam sessions (Admin only)' })
-  @RequirePermissions(`${RESOURCES.SUBJECTS}:${PERMISSIONS.READ}`)
-  getAllExamSessions(@Query('page') page: string = '1', @Query('limit') limit: string = '10') {
-    return this.examsService.getAllExamSessions(parseInt(page), parseInt(limit));
-  }
-
-  @Get('admin/statistics')
-  @ApiOperation({ summary: 'Get exam statistics (Admin only)' })
-  @RequirePermissions(`${RESOURCES.SUBJECTS}:${PERMISSIONS.READ}`)
-  getExamStatistics(@Query('subjectId') subjectId?: string) {
-    return this.examsService.getExamStatistics(subjectId);
-  }
-
-  @Delete('admin/sessions/:sessionId')
-  @ApiOperation({ summary: 'Delete exam session (Admin only)' })
-  @RequirePermissions(`${RESOURCES.SUBJECTS}:${PERMISSIONS.DELETE}`)
-  deleteExamSession(@Param('sessionId') sessionId: string, @User() admin: IUserSession) {
-    return this.examsService.deleteExamSession(sessionId, admin);
-  }
-
-  @Post('admin/expire-sessions')
-  @ApiOperation({ summary: 'Expire all active sessions that exceeded time limit (Admin only)' })
-  @RequirePermissions(`${RESOURCES.SUBJECTS}:${PERMISSIONS.UPDATE}`)
-  expireAllActiveSessions() {
-    return this.examsService.expireAllActiveSessions();
   }
 }

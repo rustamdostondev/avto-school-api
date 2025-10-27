@@ -17,35 +17,82 @@ export class ExamsService {
       throw new NotFoundException('Subject not found');
     }
 
-    // Check if user has active exam session for this subject
-    const activeSession = await this.prisma.examSessions.findFirst({
-      where: {
-        userId: user.id,
-        subjectId: data.subjectId,
-        status: 'active',
-      },
-    });
-
-    if (activeSession) {
-      throw new BadRequestException('You already have an active exam session for this subject');
-    }
-
     // Check if user has any active exam session (for any subject)
-    const anyActiveSession = await this.prisma.examSessions.findFirst({
+    const existingActiveSession = await this.prisma.examSessions.findFirst({
       where: {
         userId: user.id,
         status: 'active',
       },
-      include: {
-        subject: { select: { name: true } },
+      select: {
+        id: true,
+        questionIds: true,
+        subjectId: true,
+        startedAt: true,
+        timeLimit: true,
+        questions: true,
       },
     });
 
-    if (anyActiveSession) {
-      throw new BadRequestException('You currently have an active exam session for another subject. Please finish it first.');
+    if (existingActiveSession) {
+      // If user has active session for the same subject, return existing session
+      if (existingActiveSession.subjectId === data.subjectId) {
+        // Calculate remaining time
+        const timeSpent = Math.floor(
+          (new Date().getTime() - existingActiveSession.startedAt.getTime()) / (1000 * 60),
+        );
+        const remainingTime = Math.max(0, existingActiveSession.timeLimit - timeSpent);
+
+        // Check if session has expired
+        if (remainingTime <= 0) {
+          // Auto-expire the session
+          await this.prisma.examSessions.update({
+            where: { id: existingActiveSession.id },
+            data: {
+              status: 'expired',
+              endedAt: new Date(),
+            },
+          });
+
+          // Create exam result with 0 score for expired session
+          await this.prisma.examResults.create({
+            data: {
+              userId: user.id,
+              subjectId: existingActiveSession.subjectId,
+              sessionId: existingActiveSession.id,
+              score: 0,
+              totalQuestions: 20,
+              correctAnswers: 0,
+              timeSpent: existingActiveSession.timeLimit,
+              completedAt: new Date(),
+            },
+          });
+
+          // Continue with creating new session (fall through to the rest of the method)
+        } else {
+          // Return existing active session
+          const sessionQuestions = existingActiveSession.questions as any[];
+          return {
+            sessionId: existingActiveSession.id,
+            questions: sessionQuestions.map((q) => ({
+              id: q.id,
+              title: q.title,
+              answers: q.answers,
+            })),
+            timeLimit: existingActiveSession.timeLimit,
+            startedAt: existingActiveSession.startedAt,
+            isResumed: true,
+            remainingTime,
+          };
+        }
+      } else {
+        // User has active session for different subject
+        throw new BadRequestException(
+          'You already have an active exam session for another subject. Please complete or finish your current exam before starting a new one.',
+        );
+      }
     }
 
-    // Get 20 random questions from subject with answers
+    // Get all questions from subject with answers
     const questions = await this.prisma.questions.findMany({
       where: {
         subjectId: data.subjectId,
@@ -61,16 +108,27 @@ export class ExamsService {
           },
         },
       },
+      orderBy: {
+        createdAt: 'asc',
+      },
     });
 
     if (questions.length < 20) {
-      throw new BadRequestException(`Insufficient questions available for this subject. Required: 20, Available: ${questions.length}`);
+      throw new BadRequestException(
+        `Insufficient questions available for this subject. Required: 20, Available: ${questions.length}`,
+      );
     }
 
-    // Validate that each question has at least 2 answers
-    const invalidQuestions = questions.filter(q => q.answers.length < 2);
+    // Validate that each question has at least 2 answers and exactly one correct answer
+    const invalidQuestions = questions.filter((q) => {
+      const correctAnswers = q.answers.filter((a) => a.isCorrect);
+      return q.answers.length < 2 || correctAnswers.length !== 1;
+    });
+
     if (invalidQuestions.length > 0) {
-      throw new BadRequestException('Some questions do not have enough answer options');
+      throw new BadRequestException(
+        'Some questions do not have enough answer options or do not have exactly one correct answer',
+      );
     }
 
     // Shuffle and take 20 questions
@@ -79,20 +137,24 @@ export class ExamsService {
       .slice(0, 20)
       .map((q, index) => ({ ...q, orderIndex: index + 1 }));
 
-    // Prepare questions for exam (without correct answers)
-    const examQuestions = shuffledQuestions.map(q => ({
-      id: q.id,
-      title: q.title,
-      orderIndex: q.orderIndex,
-      answers: q.answers
-        .sort(() => Math.random() - 0.5) // Shuffle answer options
-        .map((a, index) => ({
+    // Prepare questions for exam (without exposing correct answers to client)
+    const examQuestions = shuffledQuestions.map((q) => {
+      // Shuffle answer options and track the correct answer's new position
+      const shuffledAnswers = q.answers.sort(() => Math.random() - 0.5);
+      const correctAnswerIndex = shuffledAnswers.findIndex((a) => a.isCorrect);
+
+      return {
+        id: q.id,
+        title: q.title,
+        orderIndex: q.orderIndex,
+        answers: shuffledAnswers.map((a, index) => ({
           id: a.id,
           title: a.title,
           index: index,
         })),
-      correctAnswerIndex: q.correctAnswerIndex,
-    }));
+        correctAnswerIndex: correctAnswerIndex, // Store for session but don't expose to client
+      };
+    });
 
     // Create exam session
     const examSession = await this.prisma.examSessions.create({
@@ -104,15 +166,16 @@ export class ExamsService {
         timeLimit: 60, // default 60 minutes
         status: 'active',
         totalQuestions: 20,
+        questionIds: shuffledQuestions.map((q) => q.id),
       },
     });
 
     return {
       sessionId: examSession.id,
-      questions: examQuestions.map(q => ({
+      questions: examQuestions.map((q) => ({
         id: q.id,
         title: q.title,
-        answers: q.answers,
+        answers: q.answers, // Only send answers without correct answer info
       })),
       timeLimit: examSession.timeLimit,
       startedAt: examSession.startedAt,
@@ -134,7 +197,9 @@ export class ExamsService {
     }
 
     // Check if time limit exceeded
-    const timeSpent = Math.floor((new Date().getTime() - session.startedAt.getTime()) / (1000 * 60));
+    const timeSpent = Math.floor(
+      (new Date().getTime() - session.startedAt.getTime()) / (1000 * 60),
+    );
     if (timeSpent > session.timeLimit) {
       await this.prisma.examSessions.update({
         where: { id: sessionId },
@@ -154,15 +219,15 @@ export class ExamsService {
 
     // Validate that all question IDs exist in the session
     const sessionQuestions = session.questions as any[];
-    const sessionQuestionIds = sessionQuestions.map(q => q.id);
-    const invalidAnswers = data.answers.filter(a => !sessionQuestionIds.includes(a.questionId));
-    
+    const sessionQuestionIds = sessionQuestions.map((q) => q.id);
+    const invalidAnswers = data.answers.filter((a) => !sessionQuestionIds.includes(a.questionId));
+
     if (invalidAnswers.length > 0) {
       throw new BadRequestException('Invalid question IDs in answers');
     }
 
     // Get questions with correct answers
-    const questionIds = data.answers.map(a => a.questionId);
+    const questionIds = data.answers.map((a) => a.questionId);
     const questions = await this.prisma.questions.findMany({
       where: { id: { in: questionIds } },
       select: { id: true, correctAnswerIndex: true },
@@ -170,17 +235,17 @@ export class ExamsService {
 
     // Calculate score
     let correctCount = 0;
-    const answersWithResults = data.answers.map(userAnswer => {
-      const question = questions.find(q => q.id === userAnswer.questionId);
-      
+    const answersWithResults = data.answers.map((userAnswer) => {
+      const question = questions.find((q) => q.id === userAnswer.questionId);
+
       // Validate answer index
       if (userAnswer.answer < 0) {
         throw new BadRequestException(`Invalid answer index for question ${userAnswer.questionId}`);
       }
-      
+
       const isCorrect = question && question.correctAnswerIndex === userAnswer.answer;
       if (isCorrect) correctCount++;
-      
+
       return {
         questionId: userAnswer.questionId,
         userAnswer: userAnswer.answer,
@@ -282,14 +347,16 @@ export class ExamsService {
     }
 
     // Calculate remaining time
-    const timeSpent = Math.floor((new Date().getTime() - activeSession.startedAt.getTime()) / (1000 * 60));
+    const timeSpent = Math.floor(
+      (new Date().getTime() - activeSession.startedAt.getTime()) / (1000 * 60),
+    );
     const remainingTime = Math.max(0, activeSession.timeLimit - timeSpent);
 
     // Auto-expire session if time limit exceeded
     if (remainingTime <= 0) {
       await this.prisma.examSessions.update({
         where: { id: activeSession.id },
-        data: { 
+        data: {
           status: 'expired',
           endedAt: new Date(),
         },
@@ -309,10 +376,10 @@ export class ExamsService {
         },
       });
 
-      return { 
-        hasActiveSession: false, 
+      return {
+        hasActiveSession: false,
         session: null,
-        message: 'Your exam session has expired due to time limit'
+        message: 'Your exam session has expired due to time limit',
       };
     }
 
@@ -346,7 +413,9 @@ export class ExamsService {
     }
 
     // Calculate time spent
-    const timeSpent = Math.floor((new Date().getTime() - session.startedAt.getTime()) / (1000 * 60));
+    const timeSpent = Math.floor(
+      (new Date().getTime() - session.startedAt.getTime()) / (1000 * 60),
+    );
 
     // Update exam session to completed without answers
     await this.prisma.examSessions.update({
@@ -380,136 +449,6 @@ export class ExamsService {
       totalQuestions: session.totalQuestions,
       timeSpent,
       passed: false,
-    };
-  }
-
-  // Admin functionality
-  async getAllExamSessions(page: number = 1, limit: number = 10) {
-    const skip = (page - 1) * limit;
-
-    const [sessions, total] = await Promise.all([
-      this.prisma.examSessions.findMany({
-        skip,
-        take: limit,
-        include: {
-          user: { select: { fullName: true, email: true } },
-          subject: { select: { name: true } },
-        },
-        orderBy: { startedAt: 'desc' },
-      }),
-      this.prisma.examSessions.count(),
-    ]);
-
-    return {
-      data: sessions,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
-    };
-  }
-
-  async getExamStatistics(subjectId?: string) {
-    const whereClause = subjectId ? { subjectId } : {};
-
-    const [
-      totalExams,
-      completedExams,
-      averageScore,
-      passedExams,
-      expiredExams,
-    ] = await Promise.all([
-      this.prisma.examResults.count({ where: whereClause }),
-      this.prisma.examResults.count({ 
-        where: { ...whereClause, score: { gt: 0 } } 
-      }),
-      this.prisma.examResults.aggregate({
-        where: whereClause,
-        _avg: { score: true },
-      }),
-      this.prisma.examResults.count({ 
-        where: { ...whereClause, score: { gte: 70 } } 
-      }),
-      this.prisma.examSessions.count({ 
-        where: { ...whereClause, status: 'expired' } 
-      }),
-    ]);
-
-    return {
-      totalExams,
-      completedExams,
-      averageScore: Math.round(averageScore._avg.score || 0),
-      passedExams,
-      expiredExams,
-      passRate: totalExams > 0 ? Math.round((passedExams / totalExams) * 100) : 0,
-      completionRate: totalExams > 0 ? Math.round((completedExams / totalExams) * 100) : 0,
-    };
-  }
-
-  async deleteExamSession(sessionId: string, _adminUser: IUserSession) {
-    const session = await this.prisma.examSessions.findUnique({
-      where: { id: sessionId },
-    });
-
-    if (!session) {
-      throw new NotFoundException('Exam session not found');
-    }
-
-    // Delete related exam results first
-    await this.prisma.examResults.deleteMany({
-      where: { sessionId },
-    });
-
-    // Delete the session
-    await this.prisma.examSessions.delete({
-      where: { id: sessionId },
-    });
-
-    return { message: 'Exam session deleted successfully' };
-  }
-
-  async expireAllActiveSessions() {
-    const activeSessions = await this.prisma.examSessions.findMany({
-      where: { status: 'active' },
-    });
-
-    const expiredSessions = [];
-
-    for (const session of activeSessions) {
-      const timeSpent = Math.floor((new Date().getTime() - session.startedAt.getTime()) / (1000 * 60));
-      
-      if (timeSpent > session.timeLimit) {
-        await this.prisma.examSessions.update({
-          where: { id: session.id },
-          data: { 
-            status: 'expired',
-            endedAt: new Date(),
-          },
-        });
-
-        // Create exam result for expired session
-        await this.prisma.examResults.create({
-          data: {
-            userId: session.userId,
-            subjectId: session.subjectId,
-            sessionId: session.id,
-            score: 0,
-            totalQuestions: session.totalQuestions,
-            correctAnswers: 0,
-            timeSpent: session.timeLimit,
-            completedAt: new Date(),
-          },
-        });
-
-        expiredSessions.push(session.id);
-      }
-    }
-
-    return {
-      message: `Expired ${expiredSessions.length} sessions`,
-      expiredSessions,
     };
   }
 }

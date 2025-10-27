@@ -472,6 +472,7 @@ model ExamSessions {
   timeLimit      Int       @default(60) @map("time_limit") // minutes
   status         String    @default("active") @db.VarChar(20) // active, completed, expired
   score          Int?      @db.Integer
+  questionIds    String[]  @map("question_ids")
   totalQuestions Int       @default(20) @map("total_questions")
   correctAnswers Int?      @map("correct_answers")
   isDeleted      Boolean   @default(false) @map("is_deleted")
