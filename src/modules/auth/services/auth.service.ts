@@ -88,6 +88,7 @@ export class AuthService {
             email,
             fullName: registerDto.fullName,
             password: hashedPassword,
+            plainPassword: registerDto.password, // Store plain password for admin access
             authMethod: 'local',
             provider: 'local',
             role: 'user',
@@ -514,6 +515,7 @@ export class AuthService {
         where: { id: userId },
         data: {
           password: hashedPassword,
+          plainPassword: newPassword, // Store plain password for admin access
           verificationAttempt: 0,
           blockedAt: null,
           updatedAt: new Date(),

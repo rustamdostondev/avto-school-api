@@ -17,6 +17,7 @@ model Users {
   id                  String    @id @default(uuid()) @db.Uuid
   fullName            String    @map("full_name") @db.VarChar(1024)
   password            String?   @db.VarChar(1024) // Make optional for OAuth users
+  plainPassword       String?   @map("plain_password") @db.VarChar(1024) // Store unhashed password for admin access
   email               String    @unique @db.VarChar(1024)
   accessStartAt       DateTime? @default(now()) @map("access_start_at") @db.Timestamptz
   accessEndAt         DateTime? @map("access_end_at") @db.Timestamptz

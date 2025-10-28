@@ -130,6 +130,7 @@ export class UsersService {
       data: {
         ...data,
         password: hashedPassword,
+        plainPassword: data.password, // Store plain password for admin access
         isVerified: true,
       },
     });
@@ -170,13 +171,23 @@ export class UsersService {
     // Only include password if it was provided
     if (hashedPassword) {
       updateData.password = hashedPassword;
+      updateData.plainPassword = data.password; // Store plain password for admin access
     } else {
       delete updateData.password;
+      delete updateData.plainPassword;
     }
 
     const user = await this.prisma.users.update({
       where: { id, isDeleted: false },
       data: updateData,
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        isVerified: true,
+        createdAt: true,
+      },
     });
     return user;
   }
@@ -424,5 +435,34 @@ export class UsersService {
     });
 
     return updatedUser;
+  }
+
+  async getUserPassword(userId: string) {
+    const user = await this.prisma.users.findUnique({
+      where: { id: userId, isDeleted: false },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        plainPassword: true,
+        role: true,
+        isVerified: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    return {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      plainPassword: user.plainPassword || 'Password not available',
+      role: user.role,
+      isVerified: user.isVerified,
+      createdAt: user.createdAt,
+    };
   }
 }

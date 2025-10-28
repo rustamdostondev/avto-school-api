@@ -12,20 +12,24 @@ export class UpdateUserDto {
   @IsEmail()
   email?: string;
 
+  @ApiProperty()
   @IsOptional()
   @IsString()
   @MinLength(2)
   fullName?: string;
 
+  @ApiProperty()
   @IsOptional()
   @IsString()
   @MinLength(6)
   password?: string;
 
+  @ApiProperty()
   @IsOptional()
   @IsBoolean()
   is_active?: boolean;
 
+  @ApiProperty()
   @IsOptional()
   @IsBoolean()
   is_verified?: boolean;

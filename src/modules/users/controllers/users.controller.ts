@@ -69,6 +69,13 @@ export class UsersController {
     return this.usersService.delete(id, user);
   }
 
+  @Get(':id/password')
+  @ApiOperation({ summary: 'Get user password (Admin only)' })
+  // @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.PASSWORD}`)
+  getUserPassword(@Param('id') userId: string) {
+    return this.usersService.getUserPassword(userId);
+  }
+
   // Access Period Management Endpoints
 
   @Post('access-period')

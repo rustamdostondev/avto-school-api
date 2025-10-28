@@ -14,6 +14,7 @@ export const PERMISSIONS = {
   CREATE: 'create',
   UPDATE: 'update',
   ASSIGN: 'assign',
+  PASSWORD: 'password',
 } as const;
 
 export const RESOURCES = {
@@ -23,11 +24,6 @@ export const RESOURCES = {
   FILES: 'files',
   JOBS: 'jobs',
   QUEUE: 'queue',
-  TEAMS: 'teams',
-  SOURCES: 'sources',
-  AGENTS: 'agents',
-  LANGUAGES: 'languages',
-  PROMPT_TEMPLATES: 'prompt-templates',
   SUBJECTS: 'subjects',
   QUESTIONS: 'questions',
   ANSWERS: 'answers',
