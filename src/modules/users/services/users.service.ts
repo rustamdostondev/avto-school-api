@@ -29,7 +29,6 @@ export class UsersService {
     // Build the search condition
     const where = search
       ? {
-          isDeleted: false,
           OR: [
             { fullName: { contains: search, mode: Prisma.QueryMode.insensitive } },
             { email: { contains: search, mode: Prisma.QueryMode.insensitive } },
@@ -44,11 +43,11 @@ export class UsersService {
       this.prisma.users.findMany({
         take: limit,
         skip: limit * (page - 1),
-        where,
+        where: { isDeleted: false, ...where },
         select,
         orderBy: sort,
       }),
-      this.prisma.users.count({ where }),
+      this.prisma.users.count({ where: { isDeleted: false, ...where } }),
     ]);
 
     // Return the paginated response
@@ -131,6 +130,7 @@ export class UsersService {
       data: {
         ...data,
         password: hashedPassword,
+        isVerified: true,
       },
     });
     return user;

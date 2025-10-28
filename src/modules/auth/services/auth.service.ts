@@ -223,10 +223,10 @@ export class AuthService {
     }
   }
 
-  logout(userId: string, user: IUserSession): Promise<null> {
+  logout(user: IUserSession): Promise<null> {
     return this.prisma.$transaction(async (trx: PrismaService) => {
       await trx.refreshToken.updateMany({
-        where: { userId, isDeleted: false },
+        where: { userId: user.id, isDeleted: false },
         data: {
           isDeleted: true,
           deletedAt: new Date(),
@@ -234,8 +234,13 @@ export class AuthService {
         },
       });
 
-      await trx.userSessions.update({
-        where: { id: user.sessionId, isDeleted: false },
+      // Use updateMany to handle cases where session might not exist
+      await trx.userSessions.updateMany({
+        where: {
+          sessionId: user.sessionId,
+          isDeleted: false,
+          isActive: true,
+        },
         data: {
           isActive: false,
           updatedAt: new Date(),

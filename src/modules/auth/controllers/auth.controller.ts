@@ -70,7 +70,7 @@ export class AuthController {
     description: 'Invalidates the current session and refresh tokens',
   })
   logout(@User() user: IUserSession) {
-    return this.authService.logout(user.id, user);
+    return this.authService.logout(user);
   }
 
   @Post('/email/verify-otp')
