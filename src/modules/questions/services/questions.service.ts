@@ -127,9 +127,16 @@ export class QuestionsService {
   findOne(id: string) {
     return this.prisma.questions.findFirst({
       where: { id, isDeleted: false },
-      include: {
+      select: {
         ...this.select,
         answers: {
+          select: {
+            id: true,
+            title: true,
+            isCorrect: true,
+            createdAt: true,
+            updatedAt: true,
+          },
           where: { isDeleted: false },
         },
         subject: {
