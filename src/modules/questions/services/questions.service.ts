@@ -46,16 +46,6 @@ export class QuestionsService {
           path: true,
         },
       },
-      answers: {
-        select: {
-          id: true,
-          title: true,
-          isCorrect: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-        where: { isDeleted: false },
-      },
     };
 
     // Build the search condition
