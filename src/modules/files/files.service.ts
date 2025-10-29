@@ -42,7 +42,7 @@ export class FilesService {
     });
 
     // Construct the object name using the database record's ID to ensure uniqueness.
-    const objectName = `${savedFileRecord.id}${extname(fileName)}`;
+    const objectName = `static/${savedFileRecord.id}${extname(fileName)}`;
 
     try {
       // Upload the file to the specified Minio bucket.
@@ -66,7 +66,7 @@ export class FilesService {
       throw new NotFoundException('File not found or has been deleted.', 'FileNotFound');
     }
 
-    const objectName = `${file.id}${extname(file.name)}`;
+    const objectName = `static/${file.id}${extname(file.name)}`;
 
     try {
       // Get the file object stream from Minio
@@ -127,7 +127,7 @@ export class FilesService {
     }
 
     const { bucketName, name, id } = file;
-    const objectName = `${id}${extname(name)}`;
+    const objectName = `static/${id}${extname(name)}`;
 
     try {
       const objectStream = await this.minioClientService.client.getObject(bucketName, objectName);

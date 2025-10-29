@@ -8,7 +8,7 @@ export const objectId = () => new ObjectID().toString();
 export const uuid = (): string => uuidv4();
 
 export const getBucketName = (): string => {
-  return 'aichatbot';
+  return 'images';
 };
 
 export const compareTwoDate = (date: Date): boolean => {
