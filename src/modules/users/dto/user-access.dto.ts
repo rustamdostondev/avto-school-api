@@ -18,7 +18,7 @@ export class SetUserAccessPeriodDto {
   })
   @IsOptional()
   @IsDateString()
-  @Transform(({ value }) => value ? new Date(value).toISOString() : undefined)
+  @Transform(({ value }) => (value ? new Date(value).toISOString() : undefined))
   accessStartAt?: string;
 
   @ApiProperty({
@@ -28,7 +28,7 @@ export class SetUserAccessPeriodDto {
   })
   @IsOptional()
   @IsDateString()
-  @Transform(({ value }) => value ? new Date(value).toISOString() : undefined)
+  @Transform(({ value }) => (value ? new Date(value).toISOString() : undefined))
   accessEndAt?: string;
 }
 
@@ -40,7 +40,7 @@ export class UpdateUserAccessPeriodDto {
   })
   @IsOptional()
   @IsDateString()
-  @Transform(({ value }) => value ? new Date(value).toISOString() : undefined)
+  @Transform(({ value }) => (value ? new Date(value).toISOString() : undefined))
   accessStartAt?: string;
 
   @ApiProperty({
@@ -50,7 +50,7 @@ export class UpdateUserAccessPeriodDto {
   })
   @IsOptional()
   @IsDateString()
-  @Transform(({ value }) => value ? new Date(value).toISOString() : undefined)
+  @Transform(({ value }) => (value ? new Date(value).toISOString() : undefined))
   accessEndAt?: string;
 }
 

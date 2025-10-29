@@ -162,7 +162,7 @@ export class UsersService {
     const hashedPassword = data.password ? await bcrypt.hash(data.password, 10) : undefined;
 
     // Prepare update data
-    const updateData: any = {
+    const updateData: Prisma.UsersUpdateInput = {
       ...data,
       updatedAt: new Date(),
       updatedBy: createUser.id,

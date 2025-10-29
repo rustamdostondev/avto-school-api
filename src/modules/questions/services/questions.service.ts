@@ -21,7 +21,7 @@ export class QuestionsService {
   async findAll(payload: QuestionListDto): Promise<IApiResponse<unknown[]>> {
     const { limit, page, search, sortBy, order, subjectId, ticketId } = payload;
 
-    const select = {
+    const select: Prisma.QuestionsSelect = {
       id: true,
       title: true,
       correctAnswerIndex: true,
@@ -45,6 +45,16 @@ export class QuestionsService {
           name: true,
           path: true,
         },
+      },
+      answers: {
+        select: {
+          id: true,
+          title: true,
+          isCorrect: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+        where: { isDeleted: false },
       },
     };
 

@@ -1,6 +1,12 @@
 import { PERMISSIONS_KEY } from '@common/decorators/permissions.decorator';
 import { IUserSession } from '@modules/auth/interfaces/auth.interface';
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RolesService } from '@modules/roles/services/roles.service';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -88,8 +94,12 @@ export class AuthGuard implements CanActivate {
     const hasEndAccess = !accessEndAt || currentTime <= accessEndAt;
 
     if (!hasStartAccess) {
-      const daysUntilStart = Math.ceil((accessStartAt!.getTime() - currentTime.getTime()) / (1000 * 60 * 60 * 24));
-      throw new ForbiddenException(`Access not yet available. Access will start in ${daysUntilStart} days.`);
+      const daysUntilStart = Math.ceil(
+        (accessStartAt!.getTime() - currentTime.getTime()) / (1000 * 60 * 60 * 24),
+      );
+      throw new ForbiddenException(
+        `Access not yet available. Access will start in ${daysUntilStart} days.`,
+      );
     }
 
     if (!hasEndAccess) {

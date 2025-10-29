@@ -7,7 +7,7 @@ export class WebsiteLoaderHandler implements StepHandler {
   private readonly logger = new Logger(WebsiteLoaderHandler.name);
 
   constructor() {}
-  async execute(context: StepExecutionContext): Promise<{ success: boolean; message: string }> {
+  execute(context: StepExecutionContext): Promise<{ success: boolean; message: string }> {
     const { payload, stepType } = context;
     this.logger.log(`Executing step: ${stepType}`, payload);
 
@@ -17,9 +17,9 @@ export class WebsiteLoaderHandler implements StepHandler {
 
     // TODO: Implement website loading logic
 
-    return {
+    return Promise.resolve({
       success: true,
       message: 'Website loaded and stored in RAG system successfully',
-    };
+    });
   }
 }

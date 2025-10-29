@@ -70,7 +70,11 @@ export class ExamsService {
           // Continue with creating new session (fall through to the rest of the method)
         } else {
           // Return existing active session
-          const sessionQuestions = existingActiveSession.questions as any[];
+          const sessionQuestions = existingActiveSession.questions as Array<{
+            id: string;
+            title: string;
+            answers: Array<{ id: string; title: string; index: number }>;
+          }>;
           return {
             sessionId: existingActiveSession.id,
             questions: sessionQuestions.map((q) => ({
@@ -218,7 +222,13 @@ export class ExamsService {
     }
 
     // Validate that all question IDs exist in the session
-    const sessionQuestions = session.questions as any[];
+    const sessionQuestions = session.questions as Array<{
+      id: string;
+      title: string;
+      orderIndex: number;
+      answers: Array<{ id: string; title: string; index: number }>;
+      correctAnswerIndex: number;
+    }>;
     const sessionQuestionIds = sessionQuestions.map((q) => q.id);
     const invalidAnswers = data.answers.filter((a) => !sessionQuestionIds.includes(a.questionId));
 

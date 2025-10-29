@@ -47,7 +47,7 @@ export class FilesService {
     try {
       // Upload the file to the specified Minio bucket.
       await this.minioClientService.upload(bucketName, objectName, fileBuffer);
-    } catch (error) {
+    } catch {
       // If Minio upload fails, we should roll back the database entry.
       await this.prisma.files.delete({ where: { id: savedFileRecord.id } });
 
@@ -133,7 +133,7 @@ export class FilesService {
       const objectStream = await this.minioClientService.client.getObject(bucketName, objectName);
 
       return this.streamToBuffer(objectStream);
-    } catch (error) {
+    } catch {
       throw new InternalServerErrorException('Could not fetch the file buffer.');
     }
   }
