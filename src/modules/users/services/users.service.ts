@@ -64,30 +64,6 @@ export class UsersService {
         role: true,
         isVerified: true,
         createdAt: true,
-        userRoles: {
-          select: {
-            roles: {
-              select: {
-                id: true,
-                name: true,
-                description: true,
-                rolePermissions: {
-                  select: {
-                    permissions: {
-                      select: {
-                        id: true,
-                        name: true,
-                        action: true,
-                        resource: true,
-                        description: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
       },
     });
 
@@ -95,22 +71,17 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
 
-    const roles = user.userRoles.map(({ roles }) => ({
-      id: roles.id,
-      name: roles.name,
-      description: roles.description,
-    }));
+    // const roles = user.userRoles.map(({ roles }) => ({
+    //   id: roles.id,
+    //   name: roles.name,
+    //   description: roles.description,
+    // }));
 
-    const permissions = user.userRoles
-      .flatMap(({ roles }) => roles.rolePermissions)
-      .flatMap(({ permissions }) => permissions);
+    // const permissions = user.userRoles
+    //   .flatMap(({ roles }) => roles.rolePermissions)
+    //   .flatMap(({ permissions }) => permissions);
 
-    delete user.userRoles;
-    return {
-      ...user,
-      roles,
-      permissions,
-    };
+    return user;
   }
 
   async create(data: ICreateUserDto) {
