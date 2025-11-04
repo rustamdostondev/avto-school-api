@@ -234,7 +234,7 @@ export class ExamsService {
     }
 
     // Calculate score
-    let correctCount = 0;
+    const correctCount = 0;
     const answersWithResults = data.answers.map((userAnswer) => {
       return {
         questionId: userAnswer.questionId,
