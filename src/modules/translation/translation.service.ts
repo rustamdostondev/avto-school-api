@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import axios, { AxiosResponse } from 'axios';
 
 export enum SupportedLanguages {
@@ -27,15 +27,14 @@ export interface MultiTranslationResponse {
   originalText: string;
   sourceLanguage: string;
   translations: {
-    uzbek_latin: string;
-    uzbek_cyrillic: string;
-    russian: string;
+    oz: string;
+    uz: string;
+    ru: string;
   };
 }
 
 @Injectable()
 export class TranslationService {
-  private readonly logger = new Logger(TranslationService.name);
   private readonly defaultSourceLanguage = 'auto';
   private readonly defaultTargetLanguage = SupportedLanguages.UZBEK_LATIN;
   private readonly defaultTimeout = 5000;
@@ -141,7 +140,6 @@ export class TranslationService {
       const result = response.data;
 
       if (!result || !Array.isArray(result) || !result[0] || !Array.isArray(result[0])) {
-        this.logger.error('Invalid response format from Google Translate');
         throw new Error('Translation failed - invalid response format');
       }
 
@@ -149,16 +147,11 @@ export class TranslationService {
       const detectedLanguage = result[2];
 
       if (!translatedText) {
-        this.logger.error('No translation found in response');
         throw new Error('Translation failed - no translation found');
       }
 
-      this.logger.debug(`Translated text: ${translatedText}`);
-      this.logger.debug(`Detected language: ${detectedLanguage || 'unknown'}`);
-
       return { translatedText, detectedLanguage };
     } catch (error) {
-      this.logger.error(`Translation request failed: ${error.message}`);
       throw error;
     }
   }
@@ -329,9 +322,9 @@ export class TranslationService {
         originalText: text,
         sourceLanguage: sl,
         translations: {
-          uzbek_latin: uzbekLatinResult.translatedText,
-          uzbek_cyrillic: uzbekCyrillic,
-          russian: russianResult.translatedText,
+          oz: uzbekLatinResult.translatedText,
+          uz: uzbekCyrillic,
+          ru: russianResult.translatedText,
         },
       };
     } catch (error) {
