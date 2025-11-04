@@ -19,7 +19,6 @@ import { MailModule } from '@common/mail/mail.module';
   imports: [
     JwtModule.register({
       secret: JWT_CONSTANTS.ACCESS_TOKEN_SECRET,
-      signOptions: { expiresIn: JWT_CONSTANTS.ACCESS_TOKEN_EXPIRATION as any },
     }),
     PassportModule.register({ defaultStrategy: JWT_CONSTANTS.ACCESS_TOKEN_SECRET }),
     PrismaModule,
