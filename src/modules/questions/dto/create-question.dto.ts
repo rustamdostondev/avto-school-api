@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsOptional, IsUUID, ValidateNested } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsUUID, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { NameDto } from '@common/dto/name.dto';
 
@@ -34,9 +34,4 @@ export class CreateQuestionDto {
   @IsOptional()
   @IsUUID()
   fileId?: string;
-
-  @ApiProperty({ example: 1, description: 'Correct answer index' })
-  @IsNotEmpty()
-  @IsInt()
-  correctAnswerIndex: number;
 }

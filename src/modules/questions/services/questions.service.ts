@@ -24,7 +24,6 @@ export class QuestionsService {
     const select: Prisma.QuestionsSelect = {
       id: true,
       title: true,
-      correctAnswerIndex: true,
       createdAt: true,
       updatedAt: true,
       subject: {

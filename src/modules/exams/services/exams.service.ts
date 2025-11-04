@@ -145,7 +145,6 @@ export class ExamsService {
     const examQuestions = shuffledQuestions.map((q) => {
       // Shuffle answer options and track the correct answer's new position
       const shuffledAnswers = q.answers.sort(() => Math.random() - 0.5);
-      const correctAnswerIndex = shuffledAnswers.findIndex((a) => a.isCorrect);
 
       return {
         id: q.id,
@@ -156,7 +155,6 @@ export class ExamsService {
           title: a.title,
           index: index,
         })),
-        correctAnswerIndex: correctAnswerIndex, // Store for session but don't expose to client
       };
     });
 
@@ -227,7 +225,6 @@ export class ExamsService {
       title: string;
       orderIndex: number;
       answers: Array<{ id: string; title: string; index: number }>;
-      correctAnswerIndex: number;
     }>;
     const sessionQuestionIds = sessionQuestions.map((q) => q.id);
     const invalidAnswers = data.answers.filter((a) => !sessionQuestionIds.includes(a.questionId));
@@ -236,31 +233,12 @@ export class ExamsService {
       throw new BadRequestException('Invalid question IDs in answers');
     }
 
-    // Get questions with correct answers
-    const questionIds = data.answers.map((a) => a.questionId);
-    const questions = await this.prisma.questions.findMany({
-      where: { id: { in: questionIds } },
-      select: { id: true, correctAnswerIndex: true },
-    });
-
     // Calculate score
     let correctCount = 0;
     const answersWithResults = data.answers.map((userAnswer) => {
-      const question = questions.find((q) => q.id === userAnswer.questionId);
-
-      // Validate answer index
-      if (userAnswer.answer < 0) {
-        throw new BadRequestException(`Invalid answer index for question ${userAnswer.questionId}`);
-      }
-
-      const isCorrect = question && question.correctAnswerIndex === userAnswer.answer;
-      if (isCorrect) correctCount++;
-
       return {
         questionId: userAnswer.questionId,
         userAnswer: userAnswer.answer,
-        correctAnswer: question?.correctAnswerIndex,
-        isCorrect,
       };
     });
 

@@ -411,13 +411,12 @@ model Tickets {
 }
 
 model Questions {
-  id                 String  @id @default(uuid()) @db.Uuid
-  ticketId           String  @map("ticket_id") @db.Uuid
-  subjectId          String  @map("subject_id") @db.Uuid
-  title              Json // {"oz": "...", "uz": "...", "ru": "..."}
-  fileId             String? @map("file_id") @db.Uuid
-  correctAnswerIndex Int     @default(2) @map("correct_answer_index")
-  isDeleted          Boolean @default(false) @map("is_deleted")
+  id        String  @id @default(uuid()) @db.Uuid
+  ticketId  String  @map("ticket_id") @db.Uuid
+  subjectId String  @map("subject_id") @db.Uuid
+  title     Json // {"oz": "...", "uz": "...", "ru": "..."}
+  fileId    String? @map("file_id") @db.Uuid
+  isDeleted Boolean @default(false) @map("is_deleted")
 
   // Timestamps
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
