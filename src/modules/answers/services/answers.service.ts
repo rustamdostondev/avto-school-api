@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAnswerDto } from '../dto/create-answer.dto';
 import { CreateMultipleAnswersDto } from '../dto/create-multiple-answers.dto';
@@ -103,7 +103,22 @@ export class AnswersService {
     return CustomApiResponse.paginated(results, page, limit, total);
   }
 
-  create(createAnswerDto: CreateAnswerDto, user: IUserSession) {
+  async create(createAnswerDto: CreateAnswerDto, user: IUserSession) {
+    // If this answer is marked as correct, check if question already has a correct answer
+    if (createAnswerDto.isCorrect === true) {
+      const existingCorrectAnswer = await this.prisma.answers.findFirst({
+        where: {
+          questionId: createAnswerDto.questionId,
+          isCorrect: true,
+          isDeleted: false,
+        },
+      });
+
+      if (existingCorrectAnswer) {
+        throw new BadRequestException('This question already has a correct answer. Please update existing answers instead.');
+      }
+    }
+
     return this.prisma.answers.create({
       data: {
         ...createAnswerDto,
@@ -116,6 +131,28 @@ export class AnswersService {
 
   async createMultiple(createMultipleAnswersDto: CreateMultipleAnswersDto, user: IUserSession) {
     const { questionId, answers } = createMultipleAnswersDto;
+
+    // Validate that only one answer is marked as correct
+    const correctAnswers = answers.filter(answer => answer.isCorrect === true);
+    if (correctAnswers.length > 1) {
+      throw new BadRequestException('Only one answer can be marked as correct per question');
+    }
+    if (correctAnswers.length === 0) {
+      throw new BadRequestException('At least one answer must be marked as correct');
+    }
+
+    // Check if question already has a correct answer
+    const existingCorrectAnswer = await this.prisma.answers.findFirst({
+      where: {
+        questionId,
+        isCorrect: true,
+        isDeleted: false,
+      },
+    });
+
+    if (existingCorrectAnswer) {
+      throw new BadRequestException('This question already has a correct answer. Please update existing answers instead.');
+    }
 
     // Prepare data for bulk creation - all answers will have the same questionId
     const answersData = answers.map((answer) => ({
@@ -165,7 +202,34 @@ export class AnswersService {
     });
   }
 
-  update(id: string, updateAnswerDto: UpdateAnswerDto, user: IUserSession) {
+  async update(id: string, updateAnswerDto: UpdateAnswerDto, user: IUserSession) {
+    // If updating to correct answer, check if question already has another correct answer
+    if (updateAnswerDto.isCorrect === true) {
+      // First get the current answer to know its questionId
+      const currentAnswer = await this.prisma.answers.findUnique({
+        where: { id },
+        select: { questionId: true },
+      });
+
+      if (!currentAnswer) {
+        throw new BadRequestException('Answer not found');
+      }
+
+      // Check if there's already a correct answer for this question (excluding current answer)
+      const existingCorrectAnswer = await this.prisma.answers.findFirst({
+        where: {
+          questionId: currentAnswer.questionId,
+          isCorrect: true,
+          isDeleted: false,
+          id: { not: id }, // Exclude current answer
+        },
+      });
+
+      if (existingCorrectAnswer) {
+        throw new BadRequestException('This question already has a correct answer. Please update that answer to incorrect first.');
+      }
+    }
+
     return this.prisma.answers.update({
       where: { id },
       data: {
