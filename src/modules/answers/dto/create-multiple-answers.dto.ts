@@ -4,9 +4,9 @@ import { Type } from 'class-transformer';
 import { CreateAnswerItemDto } from './create-answer-item.dto';
 
 export class CreateMultipleAnswersDto {
-  @ApiProperty({ 
-    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', 
-    description: 'Question ID to create answers for' 
+  @ApiProperty({
+    example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+    description: 'Question ID to create answers for',
   })
   @IsNotEmpty()
   @IsUUID()
