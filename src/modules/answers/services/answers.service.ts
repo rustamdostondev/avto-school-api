@@ -115,7 +115,9 @@ export class AnswersService {
       });
 
       if (existingCorrectAnswer) {
-        throw new BadRequestException('This question already has a correct answer. Please update existing answers instead.');
+        throw new BadRequestException(
+          'This question already has a correct answer. Please update existing answers instead.',
+        );
       }
     }
 
@@ -133,7 +135,7 @@ export class AnswersService {
     const { questionId, answers } = createMultipleAnswersDto;
 
     // Validate that only one answer is marked as correct
-    const correctAnswers = answers.filter(answer => answer.isCorrect === true);
+    const correctAnswers = answers.filter((answer) => answer.isCorrect === true);
     if (correctAnswers.length > 1) {
       throw new BadRequestException('Only one answer can be marked as correct per question');
     }
@@ -151,7 +153,9 @@ export class AnswersService {
     });
 
     if (existingCorrectAnswer) {
-      throw new BadRequestException('This question already has a correct answer. Please update existing answers instead.');
+      throw new BadRequestException(
+        'This question already has a correct answer. Please update existing answers instead.',
+      );
     }
 
     // Prepare data for bulk creation - all answers will have the same questionId
@@ -226,7 +230,9 @@ export class AnswersService {
       });
 
       if (existingCorrectAnswer) {
-        throw new BadRequestException('This question already has a correct answer. Please update that answer to incorrect first.');
+        throw new BadRequestException(
+          'This question already has a correct answer. Please update that answer to incorrect first.',
+        );
       }
     }
 
