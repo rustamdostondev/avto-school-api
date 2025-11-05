@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Param, Delete, UseGuards, Query, Put } from '@nestjs/common';
 import { AnswersService } from '../services/answers.service';
 import { CreateAnswerDto } from '../dto/create-answer.dto';
+import { CreateMultipleAnswersDto } from '../dto/create-multiple-answers.dto';
 import { UpdateAnswerDto } from '../dto/update-answer.dto';
 import { AnswerListDto } from '../dto/answer-list.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -33,6 +34,16 @@ export class AnswersController {
   @RequirePermissions(`${RESOURCES.ANSWERS}:${PERMISSIONS.CREATE}`)
   create(@Body() createAnswerDto: CreateAnswerDto, @User() user: IUserSession) {
     return this.answersService.create(createAnswerDto, user);
+  }
+
+  @Post('multiple')
+  @ApiOperation({ summary: 'Create multiple answers for a single question' })
+  @RequirePermissions(`${RESOURCES.ANSWERS}:${PERMISSIONS.CREATE}`)
+  createMultiple(
+    @Body() createMultipleAnswersDto: CreateMultipleAnswersDto,
+    @User() user: IUserSession,
+  ) {
+    return this.answersService.createMultiple(createMultipleAnswersDto, user);
   }
 
   @Get(':id')

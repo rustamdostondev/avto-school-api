@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateAnswerDto } from '../dto/create-answer.dto';
+import { CreateMultipleAnswersDto } from '../dto/create-multiple-answers.dto';
 import { UpdateAnswerDto } from '../dto/update-answer.dto';
 import { AnswerListDto } from '../dto/answer-list.dto';
 import { IUserSession } from '@modules/auth/interfaces/auth.interface';
@@ -113,15 +114,51 @@ export class AnswersService {
     });
   }
 
+  async createMultiple(createMultipleAnswersDto: CreateMultipleAnswersDto, user: IUserSession) {
+    const { questionId, answers } = createMultipleAnswersDto;
+
+    // Prepare data for bulk creation - all answers will have the same questionId
+    const answersData = answers.map((answer) => ({
+      questionId,
+      title: answer.title as unknown as Prisma.JsonObject,
+      isCorrect: answer.isCorrect,
+      createdBy: user.id,
+    }));
+
+    // Use transaction to ensure all answers are created or none
+    const createdAnswers = await this.prisma.$transaction(
+      answersData.map((answerData) =>
+        this.prisma.answers.create({
+          data: answerData,
+          select: this.select,
+        }),
+      ),
+    );
+
+    return createdAnswers;
+  }
+
   findOne(id: string) {
     return this.prisma.answers.findFirst({
       where: { id, isDeleted: false },
-      include: {
+      select: {
         ...this.select,
         question: {
-          include: {
-            subject: true,
-            ticket: true,
+          select: {
+            id: true,
+            title: true,
+            subject: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            ticket: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
@@ -159,12 +196,24 @@ export class AnswersService {
         questionId,
         isDeleted: false,
       },
-      include: {
+      select: {
         ...this.select,
         question: {
-          include: {
-            subject: true,
-            ticket: true,
+          select: {
+            id: true,
+            title: true,
+            subject: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            ticket: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
