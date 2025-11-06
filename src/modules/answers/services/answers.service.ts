@@ -207,7 +207,7 @@ export class AnswersService {
   }
 
   async update(id: string, updateAnswerDto: UpdateAnswerDto, user: IUserSession) {
-    // If updating to correct answer, check if question already has another correct answer
+    // If updating to correct answer, automatically set all other answers to incorrect
     if (updateAnswerDto.isCorrect === true) {
       // First get the current answer to know its questionId
       const currentAnswer = await this.prisma.answers.findUnique({
@@ -219,23 +219,38 @@ export class AnswersService {
         throw new BadRequestException('Answer not found');
       }
 
-      // Check if there's already a correct answer for this question (excluding current answer)
-      const existingCorrectAnswer = await this.prisma.answers.findFirst({
-        where: {
-          questionId: currentAnswer.questionId,
-          isCorrect: true,
-          isDeleted: false,
-          id: { not: id }, // Exclude current answer
-        },
-      });
+      // Use transaction to ensure data consistency
+      return this.prisma.$transaction(async (tx) => {
+        // First, set all other answers for this question to incorrect
+        await tx.answers.updateMany({
+          where: {
+            questionId: currentAnswer.questionId,
+            isDeleted: false,
+            id: { not: id }, // Exclude current answer
+          },
+          data: {
+            isCorrect: false,
+            updatedBy: user.id,
+            updatedAt: new Date(),
+          },
+        });
 
-      if (existingCorrectAnswer) {
-        throw new BadRequestException(
-          'This question already has a correct answer. Please update that answer to incorrect first.',
-        );
-      }
+        // Then update the current answer
+        return tx.answers.update({
+          where: { id },
+          data: {
+            ...updateAnswerDto,
+            ...(updateAnswerDto.title && {
+              title: updateAnswerDto.title as unknown as Prisma.JsonObject,
+            }),
+            updatedBy: user.id,
+            updatedAt: new Date(),
+          },
+        });
+      });
     }
 
+    // If not setting to correct, just update normally
     return this.prisma.answers.update({
       where: { id },
       data: {
