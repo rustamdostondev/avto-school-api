@@ -25,7 +25,7 @@ export class ExamsService {
     return this.formatExamResponse(examSession, questions);
   }
 
-  private async findActiveExam(userId: string, data: IStartExamDto) {
+  private findActiveExam(userId: string, data: IStartExamDto) {
     const whereClause: Prisma.ExamsWhereInput = {
       userId,
       status: 'active',
@@ -129,7 +129,7 @@ export class ExamsService {
     }
   }
 
-  private async createExamSession(data: IStartExamDto, userId: string, questions: any[]) {
+  private createExamSession(data: IStartExamDto, userId: string, questions) {
     const questionIds = questions.map((q) => q.id);
 
     return this.prisma.exams.create({
