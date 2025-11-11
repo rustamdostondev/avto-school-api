@@ -25,6 +25,40 @@ export class ExamsService {
     return this.formatExamResponse(examSession, questions);
   }
 
+  async submitAnswers(
+    sessionId: string,
+    submitDto: { correctQuestionIds: string[] },
+    user: IUserSession,
+  ) {
+    // Find the active exam session
+    const examSession = await this.prisma.exams.findFirst({
+      where: {
+        id: sessionId,
+        userId: user.id,
+        status: 'active',
+        isDeleted: false,
+      },
+    });
+
+    if (!examSession) {
+      throw new NotFoundException('Active exam session not found');
+    }
+
+    const correctQuestionIds = submitDto.correctQuestionIds;
+    const correctCount = correctQuestionIds.length;
+
+    // Update exam session with correct question IDs
+    await this.prisma.exams.update({
+      where: { id: sessionId },
+      data: {
+        correctQuestionsIds: correctQuestionIds,
+        correctQuestionCount: correctCount,
+      },
+    });
+
+    return correctQuestionIds;
+  }
+
   private findActiveExam(userId: string, data: IStartExamDto) {
     const whereClause: Prisma.ExamsWhereInput = {
       userId,

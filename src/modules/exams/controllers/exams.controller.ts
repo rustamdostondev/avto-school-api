@@ -1,6 +1,7 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Param } from '@nestjs/common';
 import { ExamsService } from '../services/exams.service';
 import { StartExamDto } from '../dto/start-exam.dto';
+import { SubmitAnswersDto } from '../dto/submit-answers.dto';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/guards/jwt-auth.guard';
 import { AuthGuard } from 'src/guards/auth.guard';
@@ -24,5 +25,16 @@ export class ExamsController {
   @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.READ}`)
   startExam(@Body() startExamDto: StartExamDto, @User() user: IUserSession) {
     return this.examsService.startExam(startExamDto, user);
+  }
+
+  @Post('submit/:sessionId')
+  @ApiOperation({ summary: 'Submit exam answers' })
+  @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.READ}`)
+  submitAnswers(
+    @Param('sessionId') sessionId: string,
+    @Body() submitDto: SubmitAnswersDto,
+    @User() user: IUserSession,
+  ) {
+    return this.examsService.submitAnswers(sessionId, submitDto, user);
   }
 }
