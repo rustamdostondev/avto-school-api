@@ -343,11 +343,13 @@ export class ExamsService {
           return {
             id: question.id,
             title: question.title,
-            answers: question.answers.map((a) => ({
-              id: a.id,
-              title: a.title,
-              isCorrect: a.isCorrect,
-            })),
+            answers: question.answers
+              .sort(() => Math.random() - 0.5)
+              .map((a) => ({
+                id: a.id,
+                title: a.title,
+                isCorrect: a.isCorrect,
+              })),
           };
         })
         .filter(Boolean);
