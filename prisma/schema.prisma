@@ -52,8 +52,7 @@ model Users {
   jobs            Jobs[]
   processingSteps ProcessingSteps[]
   oneTimeCodes    OneTimeCodes[]
-  examSessions    ExamSessions[]
-  examResults     ExamResults[]
+  exams           Exams[]
 
   @@unique([provider, providerId]) // Ensure unique provider + providerId combination
   // Indexes for better performance
@@ -379,12 +378,11 @@ model Subjects {
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
   // User IDs
-  deletedBy    String?        @map("deleted_by") @db.Uuid
-  createdBy    String?        @map("created_by") @db.Uuid
-  updatedBy    String?        @map("updated_by") @db.Uuid
-  questions    Questions[]
-  examSessions ExamSessions[]
-  examResults  ExamResults[]
+  deletedBy String?     @map("deleted_by") @db.Uuid
+  createdBy String?     @map("created_by") @db.Uuid
+  updatedBy String?     @map("updated_by") @db.Uuid
+  questions Questions[]
+  exams     Exams[]
 
   @@map("subjects")
 }
@@ -406,6 +404,7 @@ model Tickets {
 
   // Relations
   questions Questions[]
+  exams     Exams[]
 
   @@map("tickets")
 }
@@ -460,52 +459,28 @@ model Answers {
   @@map("answers")
 }
 
-// Exam System Models
-model ExamSessions {
-  id             String    @id @default(uuid()) @db.Uuid
-  userId         String    @map("user_id") @db.Uuid
-  subjectId      String    @map("subject_id") @db.Uuid
-  questions      Json // Array of question IDs and data
-  answers        Json? // User answers with results
-  startedAt      DateTime  @map("started_at") @db.Timestamptz
-  endedAt        DateTime? @map("ended_at") @db.Timestamptz
-  timeLimit      Int       @default(60) @map("time_limit") // minutes
-  status         String    @default("active") @db.VarChar(20) // active, completed, expired
-  score          Int?      @db.Integer
-  questionIds    String[]  @map("question_ids")
-  totalQuestions Int       @default(20) @map("total_questions")
-  correctAnswers Int?      @map("correct_answers")
-  isDeleted      Boolean   @default(false) @map("is_deleted")
-
-  // Timestamps
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
-
-  // User IDs
-  deletedBy String? @map("deleted_by") @db.Uuid
-  createdBy String? @map("created_by") @db.Uuid
-  updatedBy String? @map("updated_by") @db.Uuid
-
-  // Relations
-  user    Users         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subject Subjects      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  results ExamResults[]
-
-  @@map("exam_sessions")
+enum ExamType {
+  SUBJECT
+  TICKET
+  RANDOM
 }
 
-model ExamResults {
-  id             String   @id @default(uuid()) @db.Uuid
-  userId         String   @map("user_id") @db.Uuid
-  subjectId      String   @map("subject_id") @db.Uuid
-  sessionId      String   @map("session_id") @db.Uuid
-  score          Int      @db.Integer
-  totalQuestions Int      @map("total_questions")
-  correctAnswers Int      @map("correct_answers")
-  timeSpent      Int      @map("time_spent") // minutes
-  completedAt    DateTime @map("completed_at") @db.Timestamptz
-  isDeleted      Boolean  @default(false) @map("is_deleted")
+// Exam System Models
+model Exams {
+  id                   String    @id @default(uuid()) @db.Uuid
+  userId               String    @map("user_id") @db.Uuid
+  subjectId            String?   @map("subject_id") @db.Uuid
+  ticketId             String?   @map("ticket_id") @db.Uuid
+  startedAt            DateTime  @map("started_at") @db.Timestamptz
+  endedAt              DateTime? @map("ended_at") @db.Timestamptz
+  timeLimit            Int       @default(60) @map("time_limit") // minutes
+  type                 ExamType  @default(RANDOM)
+  status               String    @default("active") @db.VarChar(20) // active, completed, expired
+  questionIds          String[]  @map("question_ids")
+  correctQuestionsIds  String[]  @map("correct_questions_ids")
+  questionCount        Int       @default(20) @map("question_count")
+  correctQuestionCount Int       @default(20) @map("correct_question_count")
+  isDeleted            Boolean   @default(false) @map("is_deleted")
 
   // Timestamps
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
@@ -518,9 +493,9 @@ model ExamResults {
   updatedBy String? @map("updated_by") @db.Uuid
 
   // Relations
-  user    Users        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  subject Subjects     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  session ExamSessions @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    Users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject Subjects? @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  ticket  Tickets?  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
-  @@map("exam_results")
+  @@map("exams")
 }
