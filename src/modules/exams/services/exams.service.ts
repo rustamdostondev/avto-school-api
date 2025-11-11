@@ -25,11 +25,7 @@ export class ExamsService {
     return this.formatExamResponse(examSession, questions);
   }
 
-  async submitAnswers(
-    sessionId: string,
-    submitDto: { correctQuestionIds: string[] },
-    user: IUserSession,
-  ) {
+  async finish(sessionId: string, submitDto: { correctQuestionIds: string[] }, user: IUserSession) {
     // Find the active exam session
     const examSession = await this.prisma.exams.findFirst({
       where: {
@@ -48,7 +44,7 @@ export class ExamsService {
     const correctCount = correctQuestionIds.length;
 
     // Update exam session with correct question IDs and finish the exam
-    await this.prisma.exams.update({
+    return await this.prisma.exams.update({
       where: { id: sessionId },
       data: {
         correctQuestionsIds: correctQuestionIds,
@@ -56,9 +52,12 @@ export class ExamsService {
         status: 'completed',
         endedAt: new Date(),
       },
+      select: {
+        id: true,
+        correctQuestionCount: true,
+        questionCount: true,
+      },
     });
-
-    return correctQuestionIds;
   }
 
   async getExamStatistics(user: IUserSession) {

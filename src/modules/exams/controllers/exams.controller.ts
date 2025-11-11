@@ -27,15 +27,15 @@ export class ExamsController {
     return this.examsService.startExam(startExamDto, user);
   }
 
-  @Post('submit/:sessionId')
+  @Post('finish/:sessionId')
   @ApiOperation({ summary: 'Submit exam answers' })
   @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.READ}`)
-  submitAnswers(
+  finish(
     @Param('sessionId') sessionId: string,
     @Body() submitDto: SubmitAnswersDto,
     @User() user: IUserSession,
   ) {
-    return this.examsService.submitAnswers(sessionId, submitDto, user);
+    return this.examsService.finish(sessionId, submitDto, user);
   }
 
   @Get('statistics')
