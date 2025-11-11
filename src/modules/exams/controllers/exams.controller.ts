@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Param } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Param, Get } from '@nestjs/common';
 import { ExamsService } from '../services/exams.service';
 import { StartExamDto } from '../dto/start-exam.dto';
 import { SubmitAnswersDto } from '../dto/submit-answers.dto';
@@ -36,5 +36,12 @@ export class ExamsController {
     @User() user: IUserSession,
   ) {
     return this.examsService.submitAnswers(sessionId, submitDto, user);
+  }
+
+  @Get('statistics')
+  @ApiOperation({ summary: 'Get exam statistics' })
+  @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.READ}`)
+  getStatistics(@User() user: IUserSession) {
+    return this.examsService.getExamStatistics(user);
   }
 }

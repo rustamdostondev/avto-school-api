@@ -47,16 +47,134 @@ export class ExamsService {
     const correctQuestionIds = submitDto.correctQuestionIds;
     const correctCount = correctQuestionIds.length;
 
-    // Update exam session with correct question IDs
+    // Update exam session with correct question IDs and finish the exam
     await this.prisma.exams.update({
       where: { id: sessionId },
       data: {
         correctQuestionsIds: correctQuestionIds,
         correctQuestionCount: correctCount,
+        status: 'completed',
+        endedAt: new Date(),
       },
     });
 
     return correctQuestionIds;
+  }
+
+  async getExamStatistics(user: IUserSession) {
+    // Get all exam counts by status for the user
+    const examCounts = await this.prisma.exams.groupBy({
+      by: ['status'],
+      where: {
+        userId: user.id,
+        isDeleted: false,
+      },
+      _count: {
+        status: true,
+      },
+    });
+
+    // Get the highest score from completed exams
+    const highestScoreExam = await this.prisma.exams.findFirst({
+      where: {
+        userId: user.id,
+        status: 'completed',
+        isDeleted: false,
+      },
+      orderBy: {
+        correctQuestionCount: 'desc',
+      },
+      select: {
+        correctQuestionCount: true,
+        questionCount: true,
+      },
+    });
+
+    // Get the most recent exam to calculate days since last exam
+    const lastExam = await this.prisma.exams.findFirst({
+      where: {
+        userId: user.id,
+        isDeleted: false,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+
+    // Initialize default counts
+    const statistics = {
+      completed: 0,
+      active: 0,
+      expired: 0,
+      total: 0,
+    };
+
+    // Map the results to our statistics object
+    examCounts.forEach((item) => {
+      const count = item._count.status;
+      statistics.total += count;
+
+      switch (item.status) {
+        case 'completed':
+          statistics.completed = count;
+          break;
+        case 'active':
+          statistics.active = count;
+          break;
+        case 'expired':
+          statistics.expired = count;
+          break;
+      }
+    });
+
+    // Calculate highest score percentage
+    const highestScore = highestScoreExam
+      ? Math.round((highestScoreExam.correctQuestionCount / highestScoreExam.questionCount) * 100)
+      : 0;
+
+    // Calculate days since last exam
+    const daysSinceLastExam = lastExam
+      ? Math.floor((Date.now() - lastExam.createdAt.getTime()) / (1000 * 60 * 60 * 24))
+      : 0;
+
+    return {
+      totalExams: statistics.total,
+      completedExams: statistics.completed,
+      activeExams: statistics.active,
+      expiredExams: statistics.expired,
+      statistics: [
+        {
+          label: {
+            uz: 'Ишланган тестлар',
+            oz: 'Ishlangan testlar',
+            ru: 'Выполненные тесты',
+          },
+          count: statistics.completed,
+          type: 'completed',
+        },
+        {
+          label: {
+            uz: 'Энг юқори натижа',
+            oz: 'Eng yuqori natija',
+            ru: 'Наиболее высокий результат',
+          },
+          count: highestScore,
+          type: 'percentage',
+        },
+        {
+          label: {
+            uz: 'Сўнгги тест',
+            oz: 'Songgi test',
+            ru: 'Последний тест',
+          },
+          count: daysSinceLastExam,
+          type: 'days',
+        },
+      ],
+    };
   }
 
   private findActiveExam(userId: string, data: IStartExamDto) {
