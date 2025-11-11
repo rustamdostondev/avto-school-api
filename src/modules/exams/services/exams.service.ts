@@ -2,105 +2,121 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaService } from 'src/prisma/prisma.service';
 import { IUserSession } from '@modules/auth/interfaces/auth.interface';
 import { IStartExamDto } from '../interfaces/exam.interface';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ExamsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async startExam(data: IStartExamDto, user: IUserSession) {
-    // Check if subject exists
-    const subject = await this.prisma.subjects.findUnique({
-      where: { id: data.subjectId, isDeleted: false },
-    });
+    // Check for existing active exam
+    const existingExam = await this.findActiveExam(user.id, data);
+    if (existingExam) return this.formatExamResponse(existingExam, undefined);
 
-    if (!subject) {
-      throw new NotFoundException('Subject not found');
+    // Validate exam type requirements
+    await this.validateExamType(data);
+
+    // Get questions based on exam type
+    const questions = await this.getQuestionsByType(data);
+
+    // Create new exam session
+    const examSession = await this.createExamSession(data, user.id, questions);
+
+    return this.formatExamResponse(examSession, questions);
+  }
+
+  private async findActiveExam(userId: string, data: IStartExamDto) {
+    const whereClause: Prisma.ExamsWhereInput = {
+      userId,
+      status: 'active',
+      type: data.type,
+      isDeleted: false,
+    };
+
+    if (data.type === 'SUBJECT' && data.subjectId) {
+      whereClause.subjectId = data.subjectId;
+    } else if (data.type === 'TICKET' && data.ticketId) {
+      whereClause.ticketId = data.ticketId;
     }
 
-    // Check if user has any active exam session (for any subject)
-    const existingActiveSession = await this.prisma.exams.findFirst({
-      where: {
-        userId: user.id,
-        status: 'active',
-      },
-      select: {
-        id: true,
-        questionIds: true,
-        subjectId: true,
-        startedAt: true,
-        timeLimit: true,
+    return this.prisma.exams.findFirst({
+      where: whereClause,
+      include: {
+        subject: true,
+        ticket: true,
       },
     });
+  }
 
-    if (existingActiveSession) {
-      // If user has active session for the same subject, return existing session
-      if (existingActiveSession.subjectId === data.subjectId) {
-        // Calculate remaining time
-        const timeSpent = Math.floor(
-          (new Date().getTime() - existingActiveSession.startedAt.getTime()) / (1000 * 60),
-        );
-        const remainingTime = Math.max(0, existingActiveSession.timeLimit - timeSpent);
-
-        // Check if session has expired
-        if (remainingTime <= 0) {
-          // Auto-expire the session
-          await this.prisma.exams.update({
-            where: { id: existingActiveSession.id },
-            data: {
-              status: 'expired',
-              endedAt: new Date(),
-            },
-          });
-
-          // Continue with creating new session (fall through to the rest of the method)
-        } else {
-          // Return existing active session
-          const sessionQuestions = existingActiveSession.questionIds as Array<string>;
-          return {
-            sessionId: existingActiveSession.id,
-            questions: sessionQuestions,
-            timeLimit: existingActiveSession.timeLimit,
-            startedAt: existingActiveSession.startedAt,
-            isResumed: true,
-            remainingTime,
-          };
-        }
-      } else {
-        // User has active session for different subject
-        throw new BadRequestException(
-          'You already have an active exam session for another subject. Please complete or finish your current exam before starting a new one.',
-        );
+  private async validateExamType(data: IStartExamDto) {
+    if (data.type === 'SUBJECT') {
+      if (!data.subjectId) {
+        throw new BadRequestException('Subject ID is required for SUBJECT exam type');
+      }
+      const subject = await this.prisma.subjects.findUnique({
+        where: { id: data.subjectId, isDeleted: false },
+      });
+      if (!subject) {
+        throw new NotFoundException('Subject not found');
+      }
+    } else if (data.type === 'TICKET') {
+      if (!data.ticketId) {
+        throw new BadRequestException('Ticket ID is required for TICKET exam type');
+      }
+      const ticket = await this.prisma.tickets.findUnique({
+        where: { id: data.ticketId, isDeleted: false },
+      });
+      if (!ticket) {
+        throw new NotFoundException('Ticket not found');
       }
     }
+  }
 
-    // Get all questions from subject with answers
+  private async getQuestionsByType(data: IStartExamDto) {
+    const whereClause: Prisma.QuestionsWhereInput = { isDeleted: false };
+    const questionCount = 20;
+
+    switch (data.type) {
+      case 'SUBJECT':
+        whereClause.subjectId = data.subjectId;
+        break;
+      case 'TICKET':
+        whereClause.ticketId = data.ticketId;
+        break;
+      case 'RANDOM':
+        // No additional filter for random questions
+        break;
+    }
+
     const questions = await this.prisma.questions.findMany({
-      where: {
-        subjectId: data.subjectId,
-        isDeleted: false,
-      },
+      where: whereClause,
       include: {
         answers: {
           where: { isDeleted: false },
-          select: {
-            id: true,
-            title: true,
-            isCorrect: true,
-          },
+          select: { id: true, title: true, isCorrect: true },
         },
       },
-      orderBy: {
-        createdAt: 'asc',
-      },
+      orderBy: { createdAt: 'asc' },
     });
 
-    if (questions.length < 20) {
+    // Validate questions
+    this.validateQuestions(questions, questionCount);
+
+    // For SUBJECT and TICKET, return all questions; for RANDOM, return 20 random questions
+    if (data.type === 'RANDOM') {
+      return questions.sort(() => Math.random() - 0.5).slice(0, questionCount);
+    }
+
+    return questions;
+  }
+
+  private validateQuestions(questions, requiredCount: number = 20) {
+    if (questions.length < requiredCount) {
       throw new BadRequestException(
-        `Insufficient questions available for this subject. Required: 20, Available: ${questions.length}`,
+        `Insufficient questions available. Required: ${requiredCount}, Available: ${questions.length}`,
       );
     }
 
-    // Validate that each question has at least 2 answers and exactly one correct answer
     const invalidQuestions = questions.filter((q) => {
       const correctAnswers = q.answers.filter((a) => a.isCorrect);
       return q.answers.length < 2 || correctAnswers.length !== 1;
@@ -111,51 +127,116 @@ export class ExamsService {
         'Some questions do not have enough answer options or do not have exactly one correct answer',
       );
     }
+  }
 
-    // Shuffle and take 20 questions
-    const shuffledQuestions = questions
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 20)
-      .map((q, index) => ({ ...q, orderIndex: index + 1 }));
+  private async createExamSession(data: IStartExamDto, userId: string, questions: any[]) {
+    const questionIds = questions.map((q) => q.id);
 
-    // Prepare questions for exam (without exposing correct answers to client)
-    const examQuestions = shuffledQuestions.map((q) => {
-      // Shuffle answer options and track the correct answer's new position
-      const shuffledAnswers = q.answers.sort(() => Math.random() - 0.5);
-
-      return {
-        id: q.id,
-        title: q.title,
-        orderIndex: q.orderIndex,
-        answers: shuffledAnswers.map((a, index) => ({
-          id: a.id,
-          title: a.title,
-          index: index,
-        })),
-      };
-    });
-
-    // Create exam session
-    const examSession = await this.prisma.exams.create({
+    return this.prisma.exams.create({
       data: {
-        userId: user.id,
-        subjectId: data.subjectId,
+        userId,
+        subjectId: data.subjectId || null,
+        ticketId: data.ticketId || null,
+        type: data.type,
         startedAt: new Date(),
-        timeLimit: 60, // default 60 minutes
+        timeLimit: 60,
         status: 'active',
-        questionIds: shuffledQuestions.map((q) => q.id),
+        questionIds,
+        correctQuestionsIds: [],
+        questionCount: questions.length,
+        correctQuestionCount: 0,
+      },
+      include: {
+        subject: true,
+        ticket: true,
       },
     });
+  }
+
+  private async formatExamResponse(examSession, questions) {
+    // If questions are not provided, we need to fetch them for existing exam
+    if (!questions) {
+      // For existing exam, fetch questions by IDs
+      const timeSpent = Math.floor((Date.now() - examSession.startedAt.getTime()) / (1000 * 60));
+      const remainingTime = Math.max(0, examSession.timeLimit - timeSpent);
+
+      if (remainingTime <= 0) {
+        // Auto-expire the session
+        await this.prisma.exams.update({
+          where: { id: examSession.id },
+          data: { status: 'expired', endedAt: new Date() },
+        });
+        throw new BadRequestException('Exam session has expired');
+      }
+
+      // Fetch questions by their IDs to return complete question data
+      const existingQuestions = await this.prisma.questions.findMany({
+        where: {
+          id: { in: examSession.questionIds },
+          isDeleted: false,
+        },
+        include: {
+          answers: {
+            where: { isDeleted: false },
+            select: { id: true, title: true, isCorrect: true },
+          },
+        },
+      });
+
+      // Format questions for response in the same order as stored in questionIds
+      const formattedQuestions = examSession.questionIds
+        .map((questionId: string) => {
+          const question = existingQuestions.find((q) => q.id === questionId);
+          if (!question) return null;
+
+          return {
+            id: question.id,
+            title: question.title,
+            answers: question.answers.map((a) => ({
+              id: a.id,
+              title: a.title,
+              isCorrect: a.isCorrect,
+            })),
+          };
+        })
+        .filter(Boolean);
+
+      return {
+        sessionId: examSession.id,
+        type: examSession.type,
+        subjectId: examSession.subjectId,
+        ticketId: examSession.ticketId,
+        questions: formattedQuestions,
+        timeLimit: examSession.timeLimit,
+        startedAt: examSession.startedAt,
+        isResumed: true,
+        remainingTime,
+        questionCount: examSession.questionCount,
+      };
+    }
+
+    // For new exam, return formatted questions
+    const examQuestions = questions.map((q) => ({
+      id: q.id,
+      title: q.title,
+      answers: q.answers
+        .sort(() => Math.random() - 0.5)
+        .map((a) => ({
+          id: a.id,
+          title: a.title,
+          isCorrect: a.isCorrect,
+        })),
+    }));
 
     return {
       sessionId: examSession.id,
-      questions: examQuestions.map((q) => ({
-        id: q.id,
-        title: q.title,
-        answers: q.answers, // Only send answers without correct answer info
-      })),
+      type: examSession.type,
+      subjectId: examSession.subjectId,
+      ticketId: examSession.ticketId,
+      questions: examQuestions,
       timeLimit: examSession.timeLimit,
       startedAt: examSession.startedAt,
+      questionCount: examSession.questionCount,
     };
   }
 }

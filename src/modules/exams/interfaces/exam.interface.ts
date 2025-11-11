@@ -21,7 +21,9 @@ export interface IExamQuestion {
 }
 
 export interface IStartExamDto {
-  subjectId: string;
+  subjectId?: string;
+  ticketId?: string;
+  type: 'SUBJECT' | 'TICKET' | 'RANDOM';
 }
 
 export interface ISubmitAnswerDto {
