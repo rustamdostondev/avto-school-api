@@ -1,11 +1,6 @@
+import { ROLES } from '@common/constants';
 import { IUserSession } from '@modules/auth/interfaces/auth.interface';
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  UnauthorizedException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -25,7 +20,7 @@ export class AuthGuard implements CanActivate {
     }
 
     // Check user access period (skip for admin and super_admin)
-    if (user.role !== 'admin' && user.role !== 'super_admin') {
+    if (user.role !== ROLES.ADMIN && user.role !== ROLES.SUPER_ADMIN) {
       await this.checkUserAccessPeriod(user.id);
     }
 
@@ -45,7 +40,7 @@ export class AuthGuard implements CanActivate {
     });
 
     if (!userData) {
-      throw new ForbiddenException('User not found');
+      throw new UnauthorizedException('User not found');
     }
 
     const currentTime = new Date();
@@ -64,13 +59,13 @@ export class AuthGuard implements CanActivate {
       const daysUntilStart = Math.ceil(
         (accessStartAt!.getTime() - currentTime.getTime()) / (1000 * 60 * 60 * 24),
       );
-      throw new ForbiddenException(
+      throw new UnauthorizedException(
         `Access not yet available. Access will start in ${daysUntilStart} days.`,
       );
     }
 
     if (!hasEndAccess) {
-      throw new ForbiddenException('Access period has expired. Please contact administrator.');
+      throw new UnauthorizedException('Access period has expired. Please contact administrator.');
     }
   }
 }

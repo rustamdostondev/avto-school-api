@@ -11,7 +11,6 @@ import { UpdateUserDto } from '../dto/update-user.dto';
 import { IUserSession } from '@modules/auth/interfaces/auth.interface';
 import { PERMISSIONS, RESOURCES } from '@common/constants';
 import { RequirePermissions } from '@common/decorators/permissions.decorator';
-import { SetUserAccessPeriodDto, UpdateUserAccessPeriodDto } from '../dto/user-access.dto';
 
 @UseGuards(JwtAuthGuard, AuthGuard)
 @ApiBearerAuth('authorization')
@@ -71,59 +70,57 @@ export class UsersController {
 
   @Get(':id/password')
   @ApiOperation({ summary: 'Get user password (Admin only)' })
-  // @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.PASSWORD}`)
   getUserPassword(@Param('id') userId: string) {
     return this.usersService.getUserPassword(userId);
   }
 
   // Access Period Management Endpoints
+  // @Post('access-period')
+  // @ApiOperation({ summary: 'Set user access period (Admin only)' })
+  // @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.UPDATE}`)
+  // setUserAccessPeriod(
+  //   @Body() setAccessPeriodDto: SetUserAccessPeriodDto,
+  //   @User() admin: IUserSession,
+  // ) {
+  //   return this.usersService.setUserAccessPeriod(setAccessPeriodDto, admin);
+  // }
 
-  @Post('access-period')
-  @ApiOperation({ summary: 'Set user access period (Admin only)' })
-  @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.UPDATE}`)
-  setUserAccessPeriod(
-    @Body() setAccessPeriodDto: SetUserAccessPeriodDto,
-    @User() admin: IUserSession,
-  ) {
-    return this.usersService.setUserAccessPeriod(setAccessPeriodDto, admin);
-  }
+  // @Put(':id/access-period')
+  // @ApiOperation({ summary: 'Update user access period (Admin only)' })
+  // @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.UPDATE}`)
+  // updateUserAccessPeriod(
+  //   @Param('id') userId: string,
+  //   @Body() updateAccessPeriodDto: UpdateUserAccessPeriodDto,
+  //   @User() admin: IUserSession,
+  // ) {
+  //   return this.usersService.updateUserAccessPeriod(userId, updateAccessPeriodDto, admin);
+  // }
 
-  @Put(':id/access-period')
-  @ApiOperation({ summary: 'Update user access period (Admin only)' })
-  @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.UPDATE}`)
-  updateUserAccessPeriod(
-    @Param('id') userId: string,
-    @Body() updateAccessPeriodDto: UpdateUserAccessPeriodDto,
-    @User() admin: IUserSession,
-  ) {
-    return this.usersService.updateUserAccessPeriod(userId, updateAccessPeriodDto, admin);
-  }
+  // @Get('me/access-status')
+  // @ApiOperation({ summary: 'Check current user access status' })
+  // @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.READ}`)
+  // checkMyAccess(@User() user: IUserSession) {
+  //   return this.usersService.checkUserAccess(user.id);
+  // }
 
-  @Get('me/access-status')
-  @ApiOperation({ summary: 'Check current user access status' })
-  @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.READ}`)
-  checkMyAccess(@User() user: IUserSession) {
-    return this.usersService.checkUserAccess(user.id);
-  }
+  // @Get(':id/access-status')
+  // @ApiOperation({ summary: 'Check user access status' })
+  // @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.READ}`)
+  // checkUserAccess(@Param('id') userId: string) {
+  //   return this.usersService.checkUserAccess(userId);
+  // }
 
-  @Get(':id/access-status')
-  @ApiOperation({ summary: 'Check user access status' })
-  @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.READ}`)
-  checkUserAccess(@Param('id') userId: string) {
-    return this.usersService.checkUserAccess(userId);
-  }
+  // @Get('admin/access-periods')
+  // @ApiOperation({ summary: 'Get all users with access periods (Admin only)' })
+  // @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.READ}`)
+  // getAllUsersWithAccessPeriods(@Query() paginationDto: PaginationDto) {
+  //   return this.usersService.getAllUsersWithAccessPeriods(paginationDto.page, paginationDto.limit);
+  // }
 
-  @Get('admin/access-periods')
-  @ApiOperation({ summary: 'Get all users with access periods (Admin only)' })
-  @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.READ}`)
-  getAllUsersWithAccessPeriods(@Query() paginationDto: PaginationDto) {
-    return this.usersService.getAllUsersWithAccessPeriods(paginationDto.page, paginationDto.limit);
-  }
-
-  @Delete(':id/access-period')
-  @ApiOperation({ summary: 'Remove user access period restrictions (Admin only)' })
-  @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.UPDATE}`)
-  removeUserAccessPeriod(@Param('id') userId: string, @User() admin: IUserSession) {
-    return this.usersService.removeUserAccessPeriod(userId, admin);
-  }
+  // @Delete(':id/access-period')
+  // @ApiOperation({ summary: 'Remove user access period restrictions (Admin only)' })
+  // @RequirePermissions(`${RESOURCES.USERS}:${PERMISSIONS.UPDATE}`)
+  // removeUserAccessPeriod(@Param('id') userId: string, @User() admin: IUserSession) {
+  //   return this.usersService.removeUserAccessPeriod(userId, admin);
+  // }
 }

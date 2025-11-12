@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-
+import * as moment from 'moment';
 import { ICreateUserDto, IUpdateUserDto } from '../interfaces/user.interface';
 import { IPagination } from '@common/interfaces/pagination.interface';
 import { CustomApiResponse } from '@common/utils/api-response.util';
@@ -17,14 +17,21 @@ import {
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  select: Prisma.UsersSelect = {
+    id: true,
+    fullName: true,
+    email: true,
+    role: true,
+    isVerified: true,
+    createdAt: true,
+    accessStartAt: true,
+    accessEndAt: true,
+  };
+
   async findAll(payload: IPagination) {
     const { limit, page, search, sortBy, order } = payload;
 
-    const select = {
-      id: true,
-      fullName: true,
-      email: true,
-    };
+    const select: Prisma.UsersSelect = this.select;
 
     // Build the search condition
     const where = search
@@ -57,14 +64,7 @@ export class UsersService {
   async findById(id: string) {
     const user = await this.prisma.users.findUnique({
       where: { id, isDeleted: false },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        role: true,
-        isVerified: true,
-        createdAt: true,
-      },
+      select: this.select,
     });
 
     if (!user) {
@@ -97,13 +97,27 @@ export class UsersService {
     // Hash password if provided
     const hashedPassword = data.password ? await bcrypt.hash(data.password, 10) : undefined;
 
+    const startDate = data.accessStartAt ? moment(data.accessStartAt).toDate() : moment().toDate();
+    const endDate = data.accessEndAt
+      ? moment(data.accessEndAt).toDate()
+      : moment(startDate).add(1, 'month').toDate();
+
+    if (data.accessStartAt && data.accessEndAt) {
+      if (startDate >= endDate) {
+        throw new BadRequestException('Access start date must be before end date');
+      }
+    }
+
     const user = await this.prisma.users.create({
       data: {
         ...data,
         password: hashedPassword,
         plainPassword: data.password, // Store plain password for admin access
         isVerified: true,
+        accessStartAt: startDate,
+        accessEndAt: endDate,
       },
+      select: this.select,
     });
     return user;
   }
@@ -135,7 +149,7 @@ export class UsersService {
     // Prepare update data
     const updateData: Prisma.UsersUpdateInput = {
       ...data,
-      updatedAt: new Date(),
+      updatedAt: moment().toDate(),
       updatedBy: createUser.id,
     };
 
@@ -147,18 +161,22 @@ export class UsersService {
       delete updateData.password;
       delete updateData.plainPassword;
     }
+    if (data.accessStartAt || data.accessEndAt) {
+      const startDate = moment(data.accessStartAt || existingUser.accessStartAt).toDate();
+      const endDate = moment(data.accessEndAt || existingUser.accessEndAt).toDate();
+
+      if (startDate >= endDate) {
+        throw new BadRequestException('Access start date must be before end date');
+      }
+
+      updateData.accessStartAt = startDate;
+      updateData.accessEndAt = endDate;
+    }
 
     const user = await this.prisma.users.update({
       where: { id, isDeleted: false },
       data: updateData,
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        role: true,
-        isVerified: true,
-        createdAt: true,
-      },
+      select: this.select,
     });
     return user;
   }
@@ -175,8 +193,9 @@ export class UsersService {
     await this.prisma.users.update({
       where: { id, isDeleted: false },
       data: {
+        email: exists.email + moment().format('YYYYMMDDHHmmss'),
         isDeleted: true,
-        deletedAt: new Date(),
+        deletedAt: moment().toDate(),
         deletedBy: user.id,
       },
     });
@@ -192,9 +211,9 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${data.userId} not found`);
     }
 
-    if (data.accessStartAt && data.accessEndAt) {
-      const startDate = new Date(data.accessStartAt);
-      const endDate = new Date(data.accessEndAt);
+    if (data.accessStartAt || data.accessEndAt) {
+      const startDate = moment(data.accessStartAt || user.accessStartAt).toDate();
+      const endDate = moment(data.accessEndAt || user.accessEndAt).toDate();
 
       if (startDate >= endDate) {
         throw new BadRequestException('Access start date must be before end date');
@@ -204,19 +223,12 @@ export class UsersService {
     const updatedUser = await this.prisma.users.update({
       where: { id: data.userId },
       data: {
-        accessStartAt: data.accessStartAt ? new Date(data.accessStartAt) : undefined,
-        accessEndAt: data.accessEndAt ? new Date(data.accessEndAt) : undefined,
+        accessStartAt: data.accessStartAt ? moment(data.accessStartAt).toDate() : undefined,
+        accessEndAt: data.accessEndAt ? moment(data.accessEndAt).toDate() : undefined,
         updatedBy: admin.id,
-        updatedAt: new Date(),
+        updatedAt: moment().toDate(),
       },
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-        accessStartAt: true,
-        accessEndAt: true,
-        role: true,
-      },
+      select: this.select,
     });
 
     return updatedUser;
@@ -235,8 +247,8 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    const startDate = data.accessStartAt ? new Date(data.accessStartAt) : user.accessStartAt;
-    const endDate = data.accessEndAt ? new Date(data.accessEndAt) : user.accessEndAt;
+    const startDate = data.accessStartAt ? moment(data.accessStartAt).toDate() : user.accessStartAt;
+    const endDate = data.accessEndAt ? moment(data.accessEndAt).toDate() : user.accessEndAt;
 
     if (startDate && endDate && startDate >= endDate) {
       throw new BadRequestException('Access start date must be before end date');
@@ -245,19 +257,12 @@ export class UsersService {
     const updatedUser = await this.prisma.users.update({
       where: { id: userId },
       data: {
-        ...(data.accessStartAt && { accessStartAt: new Date(data.accessStartAt) }),
-        ...(data.accessEndAt && { accessEndAt: new Date(data.accessEndAt) }),
+        ...(data.accessStartAt && { accessStartAt: moment(data.accessStartAt).toDate() }),
+        ...(data.accessEndAt && { accessEndAt: moment(data.accessEndAt).toDate() }),
         updatedBy: admin.id,
-        updatedAt: new Date(),
+        updatedAt: moment().toDate(),
       },
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-        accessStartAt: true,
-        accessEndAt: true,
-        role: true,
-      },
+      select: this.select,
     });
 
     return updatedUser;
@@ -266,17 +271,14 @@ export class UsersService {
   async checkUserAccess(userId: string): Promise<UserAccessStatusDto> {
     const user = await this.prisma.users.findUnique({
       where: { id: userId, isDeleted: false },
-      select: {
-        accessStartAt: true,
-        accessEndAt: true,
-      },
+      select: this.select,
     });
 
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    const currentTime = new Date();
+    const currentTime = moment().toDate();
     const { accessStartAt, accessEndAt } = user;
 
     if (!accessStartAt && !accessEndAt) {
@@ -297,16 +299,12 @@ export class UsersService {
     let daysRemaining: number | undefined;
 
     if (!hasStartAccess) {
-      const daysUntilStart = Math.ceil(
-        (accessStartAt!.getTime() - currentTime.getTime()) / (1000 * 60 * 60 * 24),
-      );
+      const daysUntilStart = moment(accessStartAt).diff(moment(currentTime), 'days');
       message = `Access will start in ${daysUntilStart} days`;
     } else if (!hasEndAccess) {
       message = 'Access period has expired';
     } else if (accessEndAt) {
-      daysRemaining = Math.ceil(
-        (accessEndAt.getTime() - currentTime.getTime()) / (1000 * 60 * 60 * 24),
-      );
+      daysRemaining = moment(accessEndAt).diff(moment(currentTime), 'days');
       message =
         daysRemaining > 0 ? `Access expires in ${daysRemaining} days` : 'Access expires today';
     } else {
@@ -329,16 +327,7 @@ export class UsersService {
     const [users, total] = await Promise.all([
       this.prisma.users.findMany({
         where: { isDeleted: false },
-        select: {
-          id: true,
-          fullName: true,
-          email: true,
-          role: true,
-          accessStartAt: true,
-          accessEndAt: true,
-          isVerified: true,
-          createdAt: true,
-        },
+        select: this.select,
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
@@ -348,7 +337,7 @@ export class UsersService {
       }),
     ]);
 
-    const currentTime = new Date();
+    const currentTime = moment().toDate();
     const usersWithAccessStatus = users.map((user) => {
       const hasStartAccess = !user.accessStartAt || currentTime >= user.accessStartAt;
       const hasEndAccess = !user.accessEndAt || currentTime <= user.accessEndAt;
@@ -360,9 +349,7 @@ export class UsersService {
       } else if (!hasEndAccess) {
         accessStatus = 'Expired';
       } else if (user.accessEndAt) {
-        const daysRemaining = Math.ceil(
-          (user.accessEndAt.getTime() - currentTime.getTime()) / (1000 * 60 * 60 * 24),
-        );
+        const daysRemaining = moment(user.accessEndAt).diff(moment(currentTime), 'days');
         accessStatus = `${daysRemaining} days remaining`;
       } else {
         accessStatus = 'Active';
@@ -393,16 +380,9 @@ export class UsersService {
         accessStartAt: null,
         accessEndAt: null,
         updatedBy: admin.id,
-        updatedAt: new Date(),
+        updatedAt: moment().toDate(),
       },
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-        accessStartAt: true,
-        accessEndAt: true,
-        role: true,
-      },
+      select: this.select,
     });
 
     return updatedUser;
@@ -412,13 +392,8 @@ export class UsersService {
     const user = await this.prisma.users.findUnique({
       where: { id: userId, isDeleted: false },
       select: {
-        id: true,
-        fullName: true,
-        email: true,
+        ...this.select,
         plainPassword: true,
-        role: true,
-        isVerified: true,
-        createdAt: true,
       },
     });
 
@@ -427,13 +402,8 @@ export class UsersService {
     }
 
     return {
-      id: user.id,
-      fullName: user.fullName,
-      email: user.email,
+      ...user,
       plainPassword: user.plainPassword || 'Password not available',
-      role: user.role,
-      isVerified: user.isVerified,
-      createdAt: user.createdAt,
     };
   }
 }

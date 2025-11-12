@@ -1,5 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import {
+  IsDateString,
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
+import { Transform } from 'class-transformer';
 export class CreateUserDto {
   @ApiProperty({
     example: 'doston1@gmail.com',
@@ -26,4 +34,24 @@ export class CreateUserDto {
   @IsNotEmpty()
   @MinLength(6, { message: 'Password must be at least 6 characters long' })
   password: string;
+
+  @ApiProperty({
+    description: 'Access start date and time',
+    example: '2024-01-01T00:00:00Z',
+    required: false,
+  })
+  @IsOptional()
+  @IsDateString()
+  @Transform(({ value }) => (value ? new Date(value).toISOString() : undefined))
+  accessStartAt?: string;
+
+  @ApiProperty({
+    description: 'Access end date and time',
+    example: '2024-12-31T23:59:59Z',
+    required: false,
+  })
+  @IsOptional()
+  @IsDateString()
+  @Transform(({ value }) => (value ? new Date(value).toISOString() : undefined))
+  accessEndAt?: string;
 }

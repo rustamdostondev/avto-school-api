@@ -21,6 +21,8 @@ export interface ICreateUserDto {
   fullName: string;
   is_active?: boolean;
   is_verified?: boolean;
+  accessStartAt?: string;
+  accessEndAt?: string;
 }
 
 export interface IUpdateUserDto {
@@ -29,4 +31,6 @@ export interface IUpdateUserDto {
   fullName?: string;
   is_active?: boolean;
   is_verified?: boolean;
+  accessStartAt?: string;
+  accessEndAt?: string;
 }
