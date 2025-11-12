@@ -225,7 +225,7 @@ export class ExamsService {
 
   private async getQuestionsByType(data: IStartExamDto) {
     const whereClause: Prisma.QuestionsWhereInput = { isDeleted: false };
-    const questionCount = 20;
+    const randomQuestionCount = 20;
 
     switch (data.type) {
       case 'SUBJECT':
@@ -256,15 +256,16 @@ export class ExamsService {
       orderBy: { createdAt: 'asc' },
     });
 
-    // Validate questions
-    this.validateQuestions(questions, questionCount);
-
-    // For SUBJECT and TICKET, return all questions; for RANDOM, return 20 random questions
+    // Validate questions based on exam type
     if (data.type === 'RANDOM') {
-      return questions.sort(() => Math.random() - 0.5).slice(0, questionCount);
+      // For RANDOM type, we need at least 20 questions
+      this.validateQuestions(questions, randomQuestionCount);
+      return questions.sort(() => Math.random() - 0.5).slice(0, randomQuestionCount);
+    } else {
+      // For SUBJECT and TICKET types, we need at least 1 question
+      this.validateQuestions(questions, 1);
+      return questions;
     }
-
-    return questions;
   }
 
   private validateQuestions(questions, requiredCount: number = 20) {
@@ -376,8 +377,8 @@ export class ExamsService {
       return {
         sessionId: examSession.id,
         type: examSession.type,
-        subjectId: examSession.subjectId,
-        ticketId: examSession.ticketId,
+        subject: examSession.subject || null,
+        ticket: examSession.ticket || null,
         questions: formattedQuestions,
         timeLimit: examSession.timeLimit,
         startedAt: examSession.startedAt,
@@ -410,8 +411,8 @@ export class ExamsService {
     return {
       sessionId: examSession.id,
       type: examSession.type,
-      subjectId: examSession.subjectId,
-      ticketId: examSession.ticketId,
+      subject: examSession.subject || null,
+      ticket: examSession.ticket || null,
       questions: examQuestions,
       timeLimit: examSession.timeLimit,
       startedAt: examSession.startedAt,
