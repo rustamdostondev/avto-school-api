@@ -241,7 +241,13 @@ export class ExamsService {
 
     const questions = await this.prisma.questions.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        title: true,
+        createdAt: true,
+        file: {
+          select: { id: true, name: true, path: true },
+        },
         answers: {
           where: { isDeleted: false },
           select: { id: true, title: true, isCorrect: true },
@@ -327,7 +333,13 @@ export class ExamsService {
           id: { in: examSession.questionIds },
           isDeleted: false,
         },
-        include: {
+        select: {
+          id: true,
+          title: true,
+          createdAt: true,
+          file: {
+            select: { id: true, name: true, path: true },
+          },
           answers: {
             where: { isDeleted: false },
             select: { id: true, title: true, isCorrect: true },
@@ -344,6 +356,7 @@ export class ExamsService {
           return {
             id: question.id,
             title: question.title,
+            file: question.file || null,
             answers: question.answers
               .sort(() => Math.random() - 0.5)
               .map((a) => ({
@@ -379,6 +392,7 @@ export class ExamsService {
     const examQuestions = questions.map((q) => ({
       id: q.id,
       title: q.title,
+      file: q.file || null,
       answers: q.answers
         .sort(() => Math.random() - 0.5)
         .map((a) => ({
