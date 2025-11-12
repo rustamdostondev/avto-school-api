@@ -319,7 +319,6 @@ export class ExamsService {
           where: { id: examSession.id },
           data: { status: 'expired', endedAt: new Date() },
         });
-        throw new BadRequestException('Exam session has expired');
       }
 
       // Fetch questions by their IDs to return complete question data
