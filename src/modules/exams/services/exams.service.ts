@@ -282,6 +282,8 @@ export class ExamsService {
 
   private createExamSession(data: IStartExamDto, userId: string, questions) {
     const questionIds = questions.map((q) => q.id);
+    const startTime = new Date();
+    const timeLimit = questions.length; // 1 minute per question
 
     return this.prisma.exams.create({
       data: {
@@ -289,8 +291,8 @@ export class ExamsService {
         subjectId: data.subjectId || null,
         ticketId: data.ticketId || null,
         type: data.type,
-        startedAt: new Date(),
-        timeLimit: 60,
+        startedAt: startTime,
+        timeLimit: timeLimit,
         status: 'active',
         questionIds,
         correctQuestionsIds: [],
@@ -354,6 +356,11 @@ export class ExamsService {
         })
         .filter(Boolean);
 
+      // Calculate expected end time
+      const expectedEndTime = new Date(
+        examSession.startedAt.getTime() + examSession.timeLimit * 60 * 1000,
+      );
+
       return {
         sessionId: examSession.id,
         type: examSession.type,
@@ -362,6 +369,7 @@ export class ExamsService {
         questions: formattedQuestions,
         timeLimit: examSession.timeLimit,
         startedAt: examSession.startedAt,
+        endTime: expectedEndTime,
         isResumed: true,
         remainingTime,
         questionCount: examSession.questionCount,
@@ -381,6 +389,11 @@ export class ExamsService {
         })),
     }));
 
+    // Calculate expected end time for new exam
+    const expectedEndTime = new Date(
+      examSession.startedAt.getTime() + examSession.timeLimit * 60 * 1000,
+    );
+
     return {
       sessionId: examSession.id,
       type: examSession.type,
@@ -389,6 +402,7 @@ export class ExamsService {
       questions: examQuestions,
       timeLimit: examSession.timeLimit,
       startedAt: examSession.startedAt,
+      endTime: expectedEndTime,
       questionCount: examSession.questionCount,
     };
   }
