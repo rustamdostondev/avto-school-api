@@ -28,7 +28,7 @@ export class CreateQuestionDto {
 
   @ApiProperty({
     example: {
-      oz: 'Qo\'shimcha ma\'lumot',
+      oz: "Qo'shimcha ma'lumot",
       uz: 'Қўшимча маълумот',
       ru: 'Дополнительная информация',
     },
