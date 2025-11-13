@@ -244,6 +244,7 @@ export class ExamsService {
       select: {
         id: true,
         title: true,
+        info: true,
         createdAt: true,
         file: {
           select: { id: true, name: true, path: true },
@@ -337,6 +338,7 @@ export class ExamsService {
         select: {
           id: true,
           title: true,
+          info: true,
           createdAt: true,
           file: {
             select: { id: true, name: true, path: true },
@@ -357,6 +359,7 @@ export class ExamsService {
           return {
             id: question.id,
             title: question.title,
+            info: question.info || null,
             file: question.file || null,
             answers: question.answers
               .sort(() => Math.random() - 0.5)
@@ -393,6 +396,7 @@ export class ExamsService {
     const examQuestions = questions.map((q) => ({
       id: q.id,
       title: q.title,
+      info: q.info || null,
       file: q.file || null,
       answers: q.answers
         .sort(() => Math.random() - 0.5)

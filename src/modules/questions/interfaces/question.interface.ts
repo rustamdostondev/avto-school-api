@@ -1,26 +1,55 @@
 export interface IQuestion {
   id: string;
   subjectId: string;
-  question: string;
-  options: string[];
-  correctAnswer: number; // index of correct option
-  isActive: boolean;
+  ticketId: string;
+  title: {
+    oz: string;
+    uz: string;
+    ru: string;
+  };
+  info?: {
+    oz: string;
+    uz: string;
+    ru: string;
+  };
+  fileId?: string;
+  isDeleted: boolean;
   createdAt: Date;
   updatedAt: Date;
-  createdBy: string;
+  deletedAt?: Date;
+  createdBy?: string;
   updatedBy?: string;
+  deletedBy?: string;
 }
 
 export interface ICreateQuestionDto {
+  ticketId: string;
   subjectId: string;
-  question: string;
-  options: string[];
-  correctAnswer: number;
+  title: {
+    oz: string;
+    uz: string;
+    ru: string;
+  };
+  info?: {
+    oz: string;
+    uz: string;
+    ru: string;
+  };
+  fileId?: string;
 }
 
 export interface IUpdateQuestionDto {
-  question?: string;
-  options?: string[];
-  correctAnswer?: number;
-  isActive?: boolean;
+  ticketId?: string;
+  subjectId?: string;
+  title?: {
+    oz: string;
+    uz: string;
+    ru: string;
+  };
+  info?: {
+    oz: string;
+    uz: string;
+    ru: string;
+  };
+  fileId?: string;
 }

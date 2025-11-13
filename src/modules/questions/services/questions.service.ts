@@ -15,6 +15,8 @@ export class QuestionsService {
   select = {
     id: true,
     title: true,
+    info: true,
+    fileId: true,
     createdAt: true,
     updatedAt: true,
   };
@@ -24,6 +26,8 @@ export class QuestionsService {
     const select: Prisma.QuestionsSelect = {
       id: true,
       title: true,
+      info: true,
+      fileId: true,
       createdAt: true,
       updatedAt: true,
       subject: {
@@ -70,6 +74,24 @@ export class QuestionsService {
             string_contains: search,
           } as Prisma.JsonFilter,
         },
+        {
+          info: {
+            path: ['oz'],
+            string_contains: search,
+          } as Prisma.JsonFilter,
+        },
+        {
+          info: {
+            path: ['uz'],
+            string_contains: search,
+          } as Prisma.JsonFilter,
+        },
+        {
+          info: {
+            path: ['ru'],
+            string_contains: search,
+          } as Prisma.JsonFilter,
+        },
       ];
     }
 
@@ -101,10 +123,11 @@ export class QuestionsService {
   }
 
   create(createQuestionDto: CreateQuestionDto, user: IUserSession) {
-    const { ticketId, subjectId, fileId, title, ...rest } = createQuestionDto;
+    const { ticketId, subjectId, fileId, title, info, ...rest } = createQuestionDto;
     const data = {
       ...rest,
       title: title as unknown as Prisma.JsonObject,
+      ...(info && { info: info as unknown as Prisma.JsonObject }),
       ticket: { connect: { id: ticketId } },
       subject: { connect: { id: subjectId } },
       createdBy: user.id,
@@ -152,10 +175,11 @@ export class QuestionsService {
   }
 
   update(id: string, updateQuestionDto: UpdateQuestionDto, user: IUserSession) {
-    const { ticketId, subjectId, fileId, title, ...rest } = updateQuestionDto;
+    const { ticketId, subjectId, fileId, title, info, ...rest } = updateQuestionDto;
     const data = {
       ...rest,
       ...(title && { title: title as unknown as Prisma.JsonObject }),
+      ...(info && { info: info as unknown as Prisma.JsonObject }),
       ...(ticketId && { ticket: { connect: { id: ticketId } } }),
       ...(subjectId && { subject: { connect: { id: subjectId } } }),
       ...(fileId && { file: { connect: { id: fileId } } }),

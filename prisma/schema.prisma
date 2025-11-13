@@ -414,6 +414,7 @@ model Questions {
   ticketId  String  @map("ticket_id") @db.Uuid
   subjectId String  @map("subject_id") @db.Uuid
   title     Json // {"oz": "...", "uz": "...", "ru": "..."}
+  info      Json? // {"oz": "...", "uz": "...", "ru": "..."}
   fileId    String? @map("file_id") @db.Uuid
   isDeleted Boolean @default(false) @map("is_deleted")
 

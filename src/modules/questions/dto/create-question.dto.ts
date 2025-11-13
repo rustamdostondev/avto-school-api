@@ -27,6 +27,20 @@ export class CreateQuestionDto {
   title: NameDto;
 
   @ApiProperty({
+    example: {
+      oz: 'Qo\'shimcha ma\'lumot',
+      uz: 'Қўшимча маълумот',
+      ru: 'Дополнительная информация',
+    },
+    description: 'Additional information about the question in different languages',
+    required: false,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => NameDto)
+  info?: NameDto;
+
+  @ApiProperty({
     example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
     description: 'File ID',
     required: false,
