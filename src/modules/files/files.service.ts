@@ -8,7 +8,7 @@ import {
 import { BufferedFile, IDownloadFile } from './interfaces';
 import { extname } from 'path';
 import { Response } from 'express';
-import { getBucketName } from '@utils';
+import { getBucketName, uuid } from '@utils';
 import { IUserSession } from '@modules/auth/interfaces/auth.interface';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MinioClientService } from '@common/minio/minio.service';
@@ -20,19 +20,25 @@ export class FilesService {
   private readonly minioClientService: MinioClientService;
   constructor(private readonly prisma: PrismaService) {}
 
+  private generateObjectName(fileId: string, fileName: string): string {
+    return `/static/${fileId}${extname(fileName)}`;
+  }
+
   async upload(file: BufferedFile, user: IUserSession) {
     if (file.buffer.length / 1_000_000 > 40) {
       throw new ForbiddenException('File size exceeds the 40MB limit. Upload is forbidden.');
     }
 
     const bucketName = getBucketName();
+    const fileId = uuid();
     const fileName = file.originalname;
     const fileBuffer = file.buffer;
     const mimeType = file.mimetype;
 
     // The database entry is created first to generate a unique ID for the file object name.
-    const savedFileRecord = await this.prisma.files.create({
+    let savedFileRecord = await this.prisma.files.create({
       data: {
+        id: fileId,
         bucketName: bucketName,
         createdById: user.id,
         type: mimeType,
@@ -41,12 +47,15 @@ export class FilesService {
       },
     });
 
-    // Construct the object name using the database record's ID to ensure uniqueness.
-    const objectName = `static/${savedFileRecord.id}${extname(fileName)}`;
-
+    let objectName = this.generateObjectName(fileId, fileName);
+    let path = '/images' + objectName;
     try {
       // Upload the file to the specified Minio bucket.
       await this.minioClientService.upload(bucketName, objectName, fileBuffer);
+      savedFileRecord = await this.prisma.files.update({
+        where: { id: fileId },
+        data: { path },
+      });
     } catch {
       // If Minio upload fails, we should roll back the database entry.
       await this.prisma.files.delete({ where: { id: savedFileRecord.id } });
@@ -54,7 +63,10 @@ export class FilesService {
       throw new InternalServerErrorException('File upload failed.');
     }
 
-    return savedFileRecord;
+    return {
+      ...savedFileRecord,
+      path,
+    };
   }
 
   async download({ fileId }: IDownloadFile, user: IUserSession, response: Response): Promise<void> {
@@ -66,14 +78,11 @@ export class FilesService {
       throw new NotFoundException('File not found or has been deleted.', 'FileNotFound');
     }
 
-    const objectName = `static/${file.id}${extname(file.name)}`;
+    const path = this.generateObjectName(file.id, file.name);
 
     try {
       // Get the file object stream from Minio
-      const readStream = await this.minioClientService.client.getObject(
-        file.bucketName,
-        objectName,
-      );
+      const readStream = await this.minioClientService.client.getObject(file.bucketName, path);
 
       // Set response headers for file download
       response
@@ -126,11 +135,10 @@ export class FilesService {
       throw new NotFoundException('File not found');
     }
 
-    const { bucketName, name, id } = file;
-    const objectName = `static/${id}${extname(name)}`;
+    const path = this.generateObjectName(file.id, file.name);
 
     try {
-      const objectStream = await this.minioClientService.client.getObject(bucketName, objectName);
+      const objectStream = await this.minioClientService.client.getObject(file.bucketName, path);
 
       return this.streamToBuffer(objectStream);
     } catch {
