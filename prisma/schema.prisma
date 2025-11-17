@@ -53,6 +53,7 @@ model Users {
   processingSteps ProcessingSteps[]
   oneTimeCodes    OneTimeCodes[]
   exams           Exams[]
+  savedQuestions  SavedQuestions[]
 
   @@unique([provider, providerId]) // Ensure unique provider + providerId combination
   // Indexes for better performance
@@ -429,10 +430,11 @@ model Questions {
   updatedBy String? @map("updated_by") @db.Uuid
 
   // Relations
-  ticket  Tickets   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  subject Subjects  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  file    Files?    @relation(fields: [fileId], references: [id], onDelete: Cascade)
-  answers Answers[]
+  ticket         Tickets          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  subject        Subjects         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  file           Files?           @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  answers        Answers[]
+  savedQuestions SavedQuestions[]
 
   @@map("questions")
 }
@@ -499,4 +501,28 @@ model Exams {
   ticket  Tickets?  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@map("exams")
+}
+
+model SavedQuestions {
+  id         String  @id @default(uuid()) @db.Uuid
+  userId     String  @map("user_id") @db.Uuid
+  questionId String  @map("question_id") @db.Uuid
+  isDeleted  Boolean @default(false) @map("is_deleted")
+
+  // Timestamps
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  // User IDs
+  deletedBy String? @map("deleted_by") @db.Uuid
+  createdBy String? @map("created_by") @db.Uuid
+  updatedBy String? @map("updated_by") @db.Uuid
+
+  // Relations
+  user     Users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Questions @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@map("saved_questions")
 }

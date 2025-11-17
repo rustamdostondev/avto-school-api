@@ -16,6 +16,7 @@ import { QuestionsModule } from '@modules/questions/questions.module';
 import { AnswersModule } from '@modules/answers/answers.module';
 import { ExamsModule } from '@modules/exams/exams.module';
 import { TranslationModule } from '@modules/translation/translation.module';
+import { SavedQuestionsModule } from '@modules/saved-questions/saved-questions.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { TranslationModule } from '@modules/translation/translation.module';
     AnswersModule,
     ExamsModule,
     TranslationModule,
+    SavedQuestionsModule,
   ],
   providers: [GoogleStrategy],
 })

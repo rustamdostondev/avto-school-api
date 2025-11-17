@@ -28,6 +28,7 @@ export const RESOURCES = {
   QUESTIONS: 'questions',
   ANSWERS: 'answers',
   TICKETS: 'tickets',
+  SAVED_QUESTIONS: 'saved-questions',
 } as const;
 
 export const JWT_CONSTANTS = {

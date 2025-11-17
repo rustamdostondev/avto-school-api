@@ -32,6 +32,7 @@ export function setupSwagger(app: INestApplication) {
     .addTag('Answers', 'Answers management endpoints')
     .addTag('Exams', 'Exams management endpoints')
     .addTag('Translation', 'Translation management endpoints')
+    .addTag('Saved Questions', 'Saved questions management endpoints')
     .build();
 
   // Add basic auth protection for Swagger UI
