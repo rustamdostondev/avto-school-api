@@ -47,8 +47,8 @@ export class FilesService {
       },
     });
 
-    let objectName = this.generateObjectName(fileId, fileName);
-    let path = '/images' + objectName;
+    const objectName = this.generateObjectName(fileId, fileName);
+    const path = '/images' + objectName;
     try {
       // Upload the file to the specified Minio bucket.
       await this.minioClientService.upload(bucketName, objectName, fileBuffer);
