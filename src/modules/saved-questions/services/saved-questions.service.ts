@@ -52,7 +52,7 @@ export class SavedQuestionsService {
     },
   } as const;
 
-  async create(
+  async upsert(
     payload: CreateSavedQuestionDto,
     user: IUserSession,
   ): Promise<{ id: string } | Record<string, unknown>> {
@@ -65,14 +65,11 @@ export class SavedQuestionsService {
     });
 
     if (existing) {
-      return this.prisma.savedQuestions.update({
+      await this.prisma.savedQuestions.delete({
         where: { id: existing.id },
-        data: {
-          updatedBy: user.id,
-          updatedAt: new Date(),
-        },
-        select: { id: true },
       });
+
+      return { id: existing.id };
     }
 
     const data: Prisma.SavedQuestionsCreateInput = {

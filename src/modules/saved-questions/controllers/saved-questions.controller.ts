@@ -38,11 +38,11 @@ export class SavedQuestionsController {
     return this.savedQuestionsService.findAll(query, user);
   }
 
-  @Post()
-  @ApiOperation({ summary: 'Save question for current user' })
+  @Post('upsert')
+  @ApiOperation({ summary: 'Upsert saved question for user' })
   @RequirePermissions(`${RESOURCES.SAVED_QUESTIONS}:${PERMISSIONS.CREATE}`)
-  create(@Body() payload: CreateSavedQuestionDto, @User() user: IUserSession) {
-    return this.savedQuestionsService.create(payload, user);
+  upsert(@Body() payload: CreateSavedQuestionDto, @User() user: IUserSession) {
+    return this.savedQuestionsService.upsert(payload, user);
   }
 
   @Get(':id')
