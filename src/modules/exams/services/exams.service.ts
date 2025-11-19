@@ -11,7 +11,7 @@ export class ExamsService {
   async startExam(data: IStartExamDto, user: IUserSession) {
     // Check for existing active exam
     const existingExam = await this.findActiveExam(user.id, data);
-    if (existingExam) return this.formatExamResponse(existingExam, undefined);
+    if (existingExam) return this.formatExamResponse(existingExam, undefined, user.id);
 
     // Validate exam type requirements
     await this.validateExamType(data);
@@ -22,7 +22,7 @@ export class ExamsService {
     // Create new exam session
     const examSession = await this.createExamSession(data, user.id, questions);
 
-    return this.formatExamResponse(examSession, questions);
+    return this.formatExamResponse(examSession, questions, user.id);
   }
 
   async finish(sessionId: string, submitDto: { correctQuestionIds: string[] }, user: IUserSession) {
@@ -314,7 +314,7 @@ export class ExamsService {
     });
   }
 
-  private async formatExamResponse(examSession, questions) {
+  private async formatExamResponse(examSession, questions, userId: string) {
     // If questions are not provided, we need to fetch them for existing exam
     if (!questions) {
       // For existing exam, fetch questions by IDs
@@ -350,6 +350,17 @@ export class ExamsService {
         },
       });
 
+      const savedExistingQuestions = await this.prisma.savedQuestions.findMany({
+        where: {
+          userId,
+          questionId: { in: examSession.questionIds },
+          isDeleted: false,
+        },
+        select: { questionId: true },
+      });
+
+      const savedExistingQuestionIds = new Set(savedExistingQuestions.map((s) => s.questionId));
+
       // Format questions for response in the same order as stored in questionIds
       const formattedQuestions = examSession.questionIds
         .map((questionId: string) => {
@@ -361,6 +372,7 @@ export class ExamsService {
             title: question.title,
             info: question.info || null,
             file: question.file || null,
+            isSaved: savedExistingQuestionIds.has(question.id),
             answers: question.answers
               .sort(() => Math.random() - 0.5)
               .map((a) => ({
@@ -392,12 +404,26 @@ export class ExamsService {
       };
     }
 
+    const questionIds = questions.map((q) => q.id);
+
+    const savedQuestions = await this.prisma.savedQuestions.findMany({
+      where: {
+        userId,
+        questionId: { in: questionIds },
+        isDeleted: false,
+      },
+      select: { questionId: true },
+    });
+
+    const savedQuestionIds = new Set(savedQuestions.map((s) => s.questionId));
+
     // For new exam, return formatted questions
     const examQuestions = questions.map((q) => ({
       id: q.id,
       title: q.title,
       info: q.info || null,
       file: q.file || null,
+      isSaved: savedQuestionIds.has(q.id),
       answers: q.answers
         .sort(() => Math.random() - 0.5)
         .map((a) => ({
