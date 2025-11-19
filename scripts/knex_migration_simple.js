@@ -2,6 +2,16 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const knex = require('knex');
 
+/**
+ * Enhanced Migration Script with Proper Ordering Logic
+ *
+ * This script ensures that when data is queried with ORDER BY created_at ASC:
+ * 1. All records have sequential timestamps (1 second apart)
+ * 2. Array elements (answers) maintain their original order through order_index
+ * 3. All collections are sorted before insertion to ensure consistency
+ * 4. First elements of JSON arrays will appear first when queried with ASC ordering
+ */
+
 // Database configuration
 const dbConfig = {
   client: 'postgresql',
@@ -27,6 +37,8 @@ class SimpleMigration {
     this.subjects = new Map(); // lesson_id -> subject_uuid
     this.tickets = new Map(); // bilet_id -> ticket_uuid
     this.files = new Map(); // photo_name -> file_uuid
+    this.baseTimestamp = new Date(); // Base timestamp for proper ordering
+    this.orderCounter = 0; // Counter for sequential ordering
     this.stats = {
       subjects: 0,
       tickets: 0,
@@ -34,6 +46,13 @@ class SimpleMigration {
       questions: 0,
       answers: 0,
     };
+  }
+
+  // Get next sequential timestamp for proper ASC ordering
+  getNextTimestamp() {
+    const timestamp = new Date(this.baseTimestamp.getTime() + this.orderCounter * 1000);
+    this.orderCounter++;
+    return timestamp;
   }
 
   // UUID generator
@@ -53,11 +72,14 @@ class SimpleMigration {
     }
   }
 
-  // Questions dan lesson'larni yig'ish
+  // Questions dan lesson'larni yig'ish - sorted for proper ordering
   collectLessonsFromQuestions(questionsData) {
     const lessons = [];
 
-    Object.keys(questionsData).forEach((lessonKey) => {
+    // Sort lesson keys to ensure consistent ordering
+    const sortedLessonKeys = Object.keys(questionsData).sort();
+
+    sortedLessonKeys.forEach((lessonKey) => {
       const lessonData = questionsData[lessonKey];
       if (lessonData.lesson_info) {
         // Duplicate'larni oldini olish
@@ -68,10 +90,11 @@ class SimpleMigration {
       }
     });
 
-    return lessons;
+    // Sort lessons by ID for consistent ordering
+    return lessons.sort((a, b) => a.id - b.id);
   }
 
-  // Subjects yaratish
+  // Subjects yaratish with proper ordering
   async insertSubjects(trx, lessons) {
     const subjectsData = [];
 
@@ -86,12 +109,13 @@ class SimpleMigration {
           ru: lesson.name,
         };
 
+        const timestamp = this.getNextTimestamp();
         subjectsData.push({
           id: subjectId,
           name: nameJson,
           is_deleted: false,
-          created_at: new Date(),
-          updated_at: new Date(),
+          created_at: timestamp,
+          updated_at: timestamp,
         });
       }
     });
@@ -103,11 +127,14 @@ class SimpleMigration {
     }
   }
 
-  // Photo nomlarini yig'ish
+  // Photo nomlarini yig'ish - sorted for proper ordering
   collectPhotoNames(questionsData) {
     const photoNames = new Set();
 
-    Object.keys(questionsData).forEach((lessonKey) => {
+    // Sort lesson keys to ensure consistent ordering
+    const sortedLessonKeys = Object.keys(questionsData).sort();
+
+    sortedLessonKeys.forEach((lessonKey) => {
       const lessonData = questionsData[lessonKey];
       if (lessonData.questions && lessonData.questions.data) {
         lessonData.questions.data.forEach((question) => {
@@ -118,10 +145,11 @@ class SimpleMigration {
       }
     });
 
-    return Array.from(photoNames);
+    // Return sorted array for consistent ordering
+    return Array.from(photoNames).sort();
   }
 
-  // Files yaratish
+  // Files yaratish with proper ordering
   async insertFiles(trx, photoNames) {
     if (!photoNames || photoNames.length === 0) return;
 
@@ -131,6 +159,7 @@ class SimpleMigration {
         const fileId = this.generateUUID();
         this.files.set(photoName, fileId);
 
+        const timestamp = this.getNextTimestamp();
         filesData.push({
           id: fileId,
           type: 'image',
@@ -139,8 +168,8 @@ class SimpleMigration {
           bucket_name: 'rulionline-photos',
           path: `/photos/${photoName}`,
           is_deleted: false,
-          created_at: new Date(),
-          updated_at: new Date(),
+          created_at: timestamp,
+          updated_at: timestamp,
         });
       }
     });
@@ -152,11 +181,14 @@ class SimpleMigration {
     }
   }
 
-  // Bilet ID larini yig'ish
+  // Bilet ID larini yig'ish - sorted for proper ordering
   collectBiletIds(questionsData) {
     const biletIds = new Set();
 
-    Object.keys(questionsData).forEach((lessonKey) => {
+    // Sort lesson keys to ensure consistent ordering
+    const sortedLessonKeys = Object.keys(questionsData).sort();
+
+    sortedLessonKeys.forEach((lessonKey) => {
       const lessonData = questionsData[lessonKey];
       if (lessonData.questions && lessonData.questions.data) {
         lessonData.questions.data.forEach((question) => {
@@ -167,25 +199,28 @@ class SimpleMigration {
       }
     });
 
-    return Array.from(biletIds);
+    // Return sorted array for consistent ordering
+    return Array.from(biletIds).sort((a, b) => a - b);
   }
 
-  // Tickets yaratish
+  // Tickets yaratish with proper ordering
   async insertTickets(trx, biletIds) {
     if (!biletIds || biletIds.length === 0) return;
 
     const ticketsData = [];
-    [...new Set(biletIds)].forEach((biletId) => {
+    // biletIds is already sorted, so we maintain order
+    biletIds.forEach((biletId) => {
       if (!this.tickets.has(biletId)) {
         const ticketId = this.generateUUID();
         this.tickets.set(biletId, ticketId);
 
+        const timestamp = this.getNextTimestamp();
         ticketsData.push({
           id: ticketId,
           name: `Bilet ${biletId}`,
           is_deleted: false,
-          created_at: new Date(),
-          updated_at: new Date(),
+          created_at: timestamp,
+          updated_at: timestamp,
         });
       }
     });
@@ -197,16 +232,28 @@ class SimpleMigration {
     }
   }
 
-  // Savollarni yig'ish
+  // Savollarni yig'ish - sorted for proper ordering
   collectAllQuestions(questionsData) {
     const allQuestions = [];
 
-    Object.keys(questionsData).forEach((lessonKey) => {
+    // Sort lesson keys to ensure consistent ordering
+    const sortedLessonKeys = Object.keys(questionsData).sort();
+
+    sortedLessonKeys.forEach((lessonKey) => {
       const lessonData = questionsData[lessonKey];
       const lessonId = lessonData.lesson_info?.id;
 
       if (lessonData.questions && lessonData.questions.data) {
-        lessonData.questions.data.forEach((question) => {
+        // Sort questions by bilet_id and then by question order for consistent ordering
+        const sortedQuestions = lessonData.questions.data.sort((a, b) => {
+          if (a.bilet_id !== b.bilet_id) {
+            return a.bilet_id - b.bilet_id;
+          }
+          // If same bilet_id, maintain original order or sort by question content
+          return 0;
+        });
+
+        sortedQuestions.forEach((question) => {
           allQuestions.push({ question, lessonId });
         });
       }
@@ -215,7 +262,7 @@ class SimpleMigration {
     return allQuestions;
   }
 
-  // Questions va Answers yaratish
+  // Questions va Answers yaratish with proper ordering
   async insertQuestionsAndAnswers(trx, questionsArray) {
     if (!questionsArray || questionsArray.length === 0) return;
 
@@ -243,6 +290,7 @@ class SimpleMigration {
         ru: question.question.ru || '',
       };
 
+      const questionTimestamp = this.getNextTimestamp();
       questionsData.push({
         id: questionId,
         ticket_id: ticketId,
@@ -251,11 +299,11 @@ class SimpleMigration {
         file_id: fileId,
         correct_answer_index: question.answers.status || 1,
         is_deleted: false,
-        created_at: new Date(),
-        updated_at: new Date(),
+        created_at: questionTimestamp,
+        updated_at: questionTimestamp,
       });
 
-      // Answers data
+      // Answers data - ensure proper ordering for array elements
       if (question.answers && question.answers.answer) {
         const answers = question.answers.answer;
         const correctIndex = question.answers.status || 1;
@@ -266,6 +314,7 @@ class SimpleMigration {
 
         const maxLength = Math.max(ozAnswers.length, uzAnswers.length, ruAnswers.length);
 
+        // Create answers in order (0, 1, 2, 3...) to maintain array element order
         for (let i = 0; i < maxLength; i++) {
           const answerId = this.generateUUID();
           const isCorrect = i + 1 === correctIndex;
@@ -276,14 +325,16 @@ class SimpleMigration {
             ru: ruAnswers[i] || '',
           };
 
+          const answerTimestamp = this.getNextTimestamp();
           answersData.push({
             id: answerId,
             question_id: questionId,
             is_correct: isCorrect,
             title: titleJson,
+            order_index: i + 1, // Add order index for proper array ordering
             is_deleted: false,
-            created_at: new Date(),
-            updated_at: new Date(),
+            created_at: answerTimestamp,
+            updated_at: answerTimestamp,
           });
         }
       }
@@ -301,6 +352,54 @@ class SimpleMigration {
       await trx.batchInsert('answers', answersData, 500);
       this.stats.answers += answersData.length;
       console.log(`   ✅ Inserted ${answersData.length} answers`);
+    }
+  }
+
+  // Test query to demonstrate proper ordering
+  async testOrderedQuery() {
+    try {
+      console.log('\n🔍 Testing ordered queries...');
+
+      // Test subjects ordering
+      const subjects = await db('subjects')
+        .select('id', 'name', 'created_at')
+        .orderBy('created_at', 'asc')
+        .limit(5);
+
+      console.log('📚 First 5 subjects (ASC by created_at):');
+      subjects.forEach((subject, index) => {
+        console.log(`   ${index + 1}. ${subject.name.uz} - ${subject.created_at}`);
+      });
+
+      // Test questions with answers ordering
+      const questionsWithAnswers = await db('questions')
+        .select('questions.id', 'questions.title', 'questions.created_at')
+        .join('answers', 'questions.id', 'answers.question_id')
+        .select(
+          'answers.title as answer_title',
+          'answers.order_index',
+          'answers.created_at as answer_created_at',
+        )
+        .orderBy('questions.created_at', 'asc')
+        .orderBy('answers.order_index', 'asc')
+        .limit(10);
+
+      console.log('\n❓ First 5 questions with ordered answers (ASC):');
+      let currentQuestionId = null;
+      let questionCount = 0;
+
+      questionsWithAnswers.forEach((row) => {
+        if (row.id !== currentQuestionId && questionCount < 5) {
+          currentQuestionId = row.id;
+          questionCount++;
+          console.log(`   Q${questionCount}: ${row.title.uz}`);
+        }
+        if (questionCount <= 5 && row.id === currentQuestionId) {
+          console.log(`     A${row.order_index}: ${row.answer_title.uz}`);
+        }
+      });
+    } catch (error) {
+      console.log('⚠️  Test queries skipped (tables may not exist yet)');
     }
   }
 
@@ -359,6 +458,9 @@ class SimpleMigration {
       console.log(`Tickets: ${this.stats.tickets}`);
       console.log(`Questions: ${this.stats.questions}`);
       console.log(`Answers: ${this.stats.answers}`);
+
+      // Test the ordering
+      await this.testOrderedQuery();
 
       console.log('\n🎉 Migration completed successfully!');
     } catch (error) {

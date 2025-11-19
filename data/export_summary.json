@@ -1,0 +1,10 @@
+{
+  "timestamp": "2025-10-21T12:01:14.836Z",
+  "files_created": [
+    "lessons.json",
+    "all_questions.json",
+    "all_lesson_exams.json",
+    "all_medium_controls.json"
+  ],
+  "description": "Complete data export from rulionline.uz API"
+}

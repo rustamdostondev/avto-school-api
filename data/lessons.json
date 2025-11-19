@@ -1,0 +1,410 @@
+[
+  {
+    "id": 1,
+    "name": {
+      "oz": "Umumiy qoidalar",
+      "ru": "Общие правила",
+      "uz": "Умумий қоидалар"
+    },
+    "bob": 1,
+    "count": 46
+  },
+  {
+    "id": 2,
+    "name": {
+      "oz": "Haydovchilarning umumiy vazifalari",
+      "ru": "Общие обязанности водителей",
+      "uz": "Ҳайдовчиларнинг умумий вазифалари"
+    },
+    "bob": 2,
+    "count": 11
+  },
+  {
+    "id": 3,
+    "name": {
+      "oz": "Piyodalarning umumiy vazifalari",
+      "ru": "Общие обязанности пешеходов",
+      "uz": "Пиёдаларнинг умумий вазифалари"
+    },
+    "bob": 3,
+    "count": 17
+  },
+  {
+    "id": 4,
+    "name": {
+      "oz": "Maxsus transport vositalaring imtiyozlari",
+      "ru": "Преимущества специальных транспортных средств",
+      "uz": "Махсус транспорт воситаларининг имтиёзлари"
+    },
+    "bob": 6,
+    "count": 10
+  },
+  {
+    "id": 5,
+    "name": {
+      "oz": "Ogohlantiruvchi belgilar",
+      "ru": "Предупреждающие знаки",
+      "uz": "Огоҳлантирувчи белгилар"
+    },
+    "bob": 1.1,
+    "count": 36
+  },
+  {
+    "id": 6,
+    "name": {
+      "oz": "Imtiyoz belgilari",
+      "ru": "Знаки приоритета",
+      "uz": "Имтиёз белгилари"
+    },
+    "bob": 1.2,
+    "count": 19
+  },
+  {
+    "id": 7,
+    "name": {
+      "oz": "Taqiqlovchi belgilar",
+      "ru": "Запрещающие знаки",
+      "uz": "Тақиқловчи белгилар"
+    },
+    "bob": 1.3,
+    "count": 58
+  },
+  {
+    "id": 8,
+    "name": {
+      "oz": "Buyuruvchi belgilar",
+      "ru": "Предписывающие знаки",
+      "uz": "Буюрувчи белгилар"
+    },
+    "bob": 1.4,
+    "count": 26
+  },
+  {
+    "id": 9,
+    "name": {
+      "oz": "Axborot-ko'rsatgich belgilari",
+      "ru": "Информационно-указательные знаки",
+      "uz": "Ахборот-кўрсатгич белгилари"
+    },
+    "bob": 1.5,
+    "count": 52
+  },
+  {
+    "id": 10,
+    "name": {
+      "oz": "Servis belgilari",
+      "ru": "Знаки сервиса",
+      "uz": "Сервис белгилари"
+    },
+    "bob": 1.6,
+    "count": 1
+  },
+  {
+    "id": 11,
+    "name": {
+      "oz": "Qo'shimcha axborot belgilari",
+      "ru": "Дополнительные информационные знаки",
+      "uz": "Қўшимча ахборот белгилари"
+    },
+    "bob": 1.7,
+    "count": 36
+  },
+  {
+    "id": 12,
+    "name": {
+      "oz": "Yotiq chiziqlar",
+      "ru": "Горизонтальная разметка",
+      "uz": "Ётиқ чизиқлар"
+    },
+    "bob": 2.1,
+    "count": 70
+  },
+  {
+    "id": 13,
+    "name": {
+      "oz": "Tik chiziqlar",
+      "ru": "Вертикальная разметка",
+      "uz": "Тик чизиқлар"
+    },
+    "bob": 2.2,
+    "count": 5
+  },
+  {
+    "id": 14,
+    "name": {
+      "oz": "Svetofor ishoralari",
+      "ru": "Сигналы светофора",
+      "uz": "Светофор ишоралари"
+    },
+    "bob": 7.1,
+    "count": 33
+  },
+  {
+    "id": 23,
+    "bob": 15,
+    "count": 20,
+    "name": {
+      "oz": "Tartibga solingan chorrahalar",
+      "ru": "Организованные перекрестки",
+      "uz": "Тартибга солинган чорраҳалар"
+    }
+  },
+  {
+    "id": 16,
+    "name": {
+      "oz": "Ogohlantiruvchi va avariya (xavf-xatar) ishoralari",
+      "ru": "Предупредительные и аварийные сигналы",
+      "uz": "Огоҳлантирувчи ва авария (хавф-хатар) ишоралари"
+    },
+    "bob": 8,
+    "count": 25
+  },
+  {
+    "id": 17,
+    "name": {
+      "oz": "Harakatlanishni boshlash, manyvr qilish",
+      "ru": "Начало движения, маневрирование",
+      "uz": "Ҳаракатланишни бошлаш, манёвр қилиш"
+    },
+    "bob": 9,
+    "count": 50
+  },
+  {
+    "id": 18,
+    "name": {
+      "oz": "Yo'lning qatnov qismida transport vositalarining joylashuvi",
+      "ru": "Расположение транспортных средств на проезжей части дороги",
+      "uz": "Йўлнинг қатнов қисмида транспорт воситаларининг жойлашуви"
+    },
+    "bob": 10,
+    "count": 36
+  },
+  {
+    "id": 19,
+    "name": {
+      "oz": "Harakatlanish tezligi",
+      "ru": "Скорость движения",
+      "uz": "Ҳаракатланиш тезлиги"
+    },
+    "bob": 11,
+    "count": 35
+  },
+  {
+    "id": 20,
+    "name": { "oz": "Quvib o'tish", "ru": "Обгон", "uz": "Қувиб ўтиш" },
+    "bob": 12,
+    "count": 32
+  },
+  {
+    "id": 21,
+    "name": {
+      "oz": "To'xtash va to'xtab turish",
+      "ru": "Остановка и стоянка",
+      "uz": "Тўхташ ва тўхтаб туриш"
+    },
+    "bob": 13,
+    "count": 66
+  },
+  {
+    "id": 22,
+    "name": {
+      "oz": "Chorrahalarda harakatlanish",
+      "ru": "Проезд перекрестков",
+      "uz": "Чорраҳаларда ҳаракатланиш"
+    },
+    "bob": 14,
+    "count": 14
+  },
+  {
+    "id": 23,
+    "name": {
+      "oz": "Tartibga solingan chorrahalar",
+      "ru": "Регулируемые перекрестки",
+      "uz": "Тартибга солинган чорраҳалар"
+    },
+    "bob": 15,
+    "count": 20
+  },
+  {
+    "id": 24,
+    "name": {
+      "oz": "Tartibga solinmagan chorrahalar asosiy yo'l yo'nalishi to'g'riga",
+      "ru": "Нерегулируемые перекрестки по направлению главной дороги",
+      "uz": "Тартибга солинмаган чорраҳалар асосий йўл йўналиши тўғрига"
+    },
+    "bob": 16.1,
+    "count": 18
+  },
+  {
+    "id": 25,
+    "name": {
+      "oz": "Tartibga solinmagan chorrahalar teng ahamiyatli",
+      "ru": "Нерегулируемые перекрестки равнозначных дорог",
+      "uz": "Тартибга солинмаган чорраҳалар тенг ахамиятли"
+    },
+    "bob": 16.2,
+    "count": 48
+  },
+  {
+    "id": 26,
+    "name": {
+      "oz": "Tartibga solinmagan chorrahalar asosiy yo'l yo'nalishi o'zgarishi",
+      "ru": "Нерегулируемые перекрестки с изменением направления главной дороги",
+      "uz": "Тартибга солинмаган чорраҳалар асосий йўл йўналиши ўзгариши"
+    },
+    "bob": 16.3,
+    "count": 28
+  },
+  {
+    "id": 27,
+    "name": {
+      "oz": "Piyodalarning o'tish joylari va yo'nalishli transport vositalarining bekatlari",
+      "ru": "Пешеходные переходы и остановки маршрутных транспортных средств",
+      "uz": "Пиёдаларнинг ўтиш жойлари ва йўналишли транспорт воситаларининг бекатлари"
+    },
+    "bob": 17,
+    "count": 14
+  },
+  {
+    "id": 28,
+    "name": {
+      "oz": "Temir yo'l kesishmalari orqali harakatlanish",
+      "ru": "Проезд через железнодорожные переезды",
+      "uz": "Темир йўл кесишмалари орқали ҳаракатланиш"
+    },
+    "bob": 18,
+    "count": 17
+  },
+  {
+    "id": 29,
+    "name": {
+      "oz": "Avtomagistrallarda harakatlanish",
+      "ru": "Движение по автомагистралям",
+      "uz": "Автомагистралларда ҳаракатланиш"
+    },
+    "bob": 19,
+    "count": 14
+  },
+  {
+    "id": 30,
+    "name": {
+      "oz": "Turar joy dahalarida harakatlanish",
+      "ru": "Движение в жилых зонах",
+      "uz": "Турар жой даҳаларида ҳаракатланиш"
+    },
+    "bob": 20,
+    "count": 9
+  },
+  {
+    "id": 31,
+    "name": {
+      "oz": "Tik balandlik va nishabliklarida harakatlanish",
+      "ru": "Движение на подъемах и спусках",
+      "uz": "Тик баландлик ва нишабликларда ҳаракатланиш"
+    },
+    "bob": 21,
+    "count": 3
+  },
+  {
+    "id": 32,
+    "name": {
+      "oz": "Yo'nalishli transport vositalarining imtiyozlari",
+      "ru": "Преимущества маршрутных транспортных средств",
+      "uz": "Йўналишли транспорт воситаларининг имтиёзлари"
+    },
+    "bob": 22,
+    "count": 18
+  },
+  {
+    "id": 33,
+    "name": {
+      "oz": "Tashqi yoritish asboblaridan foydalanish",
+      "ru": "Использование внешних световых приборов",
+      "uz": "Ташқи ёритиш асбобларидан фойдаланиш"
+    },
+    "bob": 23,
+    "count": 22
+  },
+  {
+    "id": 34,
+    "name": {
+      "oz": "Mexanik transport vositalarini shatakka olish",
+      "ru": "Буксировка механических транспортных средств",
+      "uz": "Механик транспорт воситаларини шатакка олиш"
+    },
+    "bob": 24,
+    "count": 28
+  },
+  {
+    "id": 35,
+    "name": {
+      "oz": "Transport vositalarini boshqarishni o'rgatish",
+      "ru": "Обучение вождению транспортных средств",
+      "uz": "Транспорт воситаларини бошқаришни ўргатиш"
+    },
+    "bob": 25,
+    "count": 7
+  },
+  {
+    "id": 36,
+    "name": { "oz": "Odam tashish", "ru": "Перевозка людей", "uz": "Одам ташиш" },
+    "bob": 26,
+    "count": 20
+  },
+  {
+    "id": 37,
+    "name": { "oz": "Yuk tashish", "ru": "Перевозка грузов", "uz": "Юк ташиш" },
+    "bob": 27,
+    "count": 16
+  },
+  {
+    "id": 38,
+    "name": {
+      "oz": "Velosiped, moped va aravalar harakatlanishiga, shuningdek, hayvonlarni haydab o'tishga doir qo'shimcha talablar",
+      "ru": "Дополнительные требования к движению велосипедов, мопедов и гужевых повозок, а также к прогону животных",
+      "uz": "Велосипед, мопед ва аравалар ҳаракатланишига, шунингдек, ҳайвонларни ҳайдаб ўтишга доир қўшимча талаблар"
+    },
+    "bob": 28,
+    "count": 10
+  },
+  {
+    "id": 39,
+    "name": {
+      "oz": "Mansabdor shaxslarning va fuqarolarning yo'l harakati xavfsizligini ta'minlash, transport vositalarini yo'lga chiqarish, raqam va taniqli belgilarini o'rnatish bo'yicha majburiyatlari",
+      "ru": "Обязанности должностных лиц и граждан по обеспечению безопасности дорожного движения, выпуску транспортных средств на дорогу, установке номерных и опознавательных знаков",
+      "uz": "Мансабдор шахсларнинг ва фуқароларнинг йўл ҳаракати хавфсизлигини таъминлаш, транспорт воситаларини йўлга чиқариш, рақам ва таниқли белгиларини ўрнатиш бўйича мажбуриятлари"
+    },
+    "bob": 29,
+    "count": 12
+  },
+  {
+    "id": 40,
+    "name": {
+      "oz": "Transport vositalaridan foydalanishni taqiqlovchi shartlar",
+      "ru": "Условия, запрещающие эксплуатацию транспортных средств",
+      "uz": "Транспорт воситаларидан фойдаланишни тақиқловчи шартлар"
+    },
+    "bob": 3,
+    "count": 46
+  },
+  {
+    "id": 41,
+    "name": {
+      "oz": "Harakat xafsizligi asoslari",
+      "ru": "Основы безопасности движения",
+      "uz": "Ҳаракат хафсизлиги асослари"
+    },
+    "bob": 30,
+    "count": 71
+  },
+  {
+    "id": 42,
+    "name": {
+      "oz": "Birinchi tibbiy yordam",
+      "ru": "Первая медицинская помощь",
+      "uz": "Биринчи тиббий ёрдам"
+    },
+    "bob": 31,
+    "count": 34
+  }
+]
