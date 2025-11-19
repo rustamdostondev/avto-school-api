@@ -15,7 +15,7 @@ const knex = require('knex');
 // Database configuration
 const dbConfig = {
   client: 'postgresql',
-  connection: 'postgresql://postgres:130230@localhost:5432/avto_school',
+  connection: 'postgresql://avto_school:CFIHcY2UlbthnCdZ4IP1x@157.173.121.179:5432/avto_school',
   pool: {
     min: 2,
     max: 10,
@@ -25,8 +25,9 @@ const dbConfig = {
   },
 };
 
-// Ma'lumotlar fayli - faqat lesson exams
+// Ma'lumotlar fayllari
 const DATA_FILE = './data/all_questions.json';
+const LESSONS_FILE = './data/lessons.json';
 
 // Knex instance yaratish
 const db = knex(dbConfig);
@@ -94,6 +95,15 @@ class SimpleMigration {
     return lessons.sort((a, b) => a.id - b.id);
   }
 
+  // Load lessons from lessons.json file
+  loadLessons() {
+    if (!fs.existsSync(LESSONS_FILE)) {
+      throw new Error('❌ lessons.json file not found!');
+    }
+    const lessons = JSON.parse(fs.readFileSync(LESSONS_FILE, 'utf8'));
+    return lessons.sort((a, b) => a.id - b.id); // Sort by ID for consistent ordering
+  }
+
   // Subjects yaratish with proper ordering
   async insertSubjects(trx, lessons) {
     const subjectsData = [];
@@ -103,16 +113,12 @@ class SimpleMigration {
         const subjectId = this.generateUUID();
         this.subjects.set(lesson.id, subjectId);
 
-        const nameJson = {
-          uz: lesson.name,
-          oz: lesson.name,
-          ru: lesson.name,
-        };
+        const nameJson = lesson.name;
 
         const timestamp = this.getNextTimestamp();
         subjectsData.push({
           id: subjectId,
-          name: nameJson,
+          name: JSON.stringify(nameJson), // Properly serialize JSON for PostgreSQL
           is_deleted: false,
           created_at: timestamp,
           updated_at: timestamp,
@@ -162,11 +168,11 @@ class SimpleMigration {
         const timestamp = this.getNextTimestamp();
         filesData.push({
           id: fileId,
-          type: 'image',
+          type: 'image/png',
           name: photoName,
           size: 0,
-          bucket_name: 'rulionline-photos',
-          path: `/photos/${photoName}`,
+          bucket_name: 'images',
+          path: `/images/static/${photoName}`,
           is_deleted: false,
           created_at: timestamp,
           updated_at: timestamp,
@@ -295,9 +301,8 @@ class SimpleMigration {
         id: questionId,
         ticket_id: ticketId,
         subject_id: subjectId,
-        title: titleJson,
+        title: JSON.stringify(titleJson), // Properly serialize JSON for PostgreSQL
         file_id: fileId,
-        correct_answer_index: question.answers.status || 1,
         is_deleted: false,
         created_at: questionTimestamp,
         updated_at: questionTimestamp,
@@ -330,8 +335,7 @@ class SimpleMigration {
             id: answerId,
             question_id: questionId,
             is_correct: isCorrect,
-            title: titleJson,
-            order_index: i + 1, // Add order index for proper array ordering
+            title: JSON.stringify(titleJson), // Properly serialize JSON for PostgreSQL
             is_deleted: false,
             created_at: answerTimestamp,
             updated_at: answerTimestamp,
@@ -427,9 +431,9 @@ class SimpleMigration {
       await db.transaction(async (trx) => {
         console.log('🔄 Starting database transaction...\n');
 
-        // 1. Questions dan lesson'larni yig'ish va Subjects yaratish
-        console.log('📚 Processing subjects from questions...');
-        const lessons = this.collectLessonsFromQuestions(questionsData);
+        // 1. Lessons.json dan lesson'larni yuklash va Subjects yaratish
+        console.log('📚 Processing subjects from lessons.json...');
+        const lessons = this.loadLessons();
         await this.insertSubjects(trx, lessons);
 
         // 2. Photo nomlarini yig'ish va Files yaratish
