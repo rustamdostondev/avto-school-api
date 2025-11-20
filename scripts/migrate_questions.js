@@ -21,7 +21,7 @@ async function migrateQuestions() {
 
     // Start transaction
     await db.transaction(async (trx) => {
-      const subjects = subjectsData.map((subject, index) => {
+      const subjectsArr = subjectsData.map((subject, index) => {
         const timestamp = new Date(Date.now() + index * 1000);
         const id = uuidv4();
         return {
@@ -30,149 +30,148 @@ async function migrateQuestions() {
           is_deleted: false,
           created_at: timestamp,
           updated_at: timestamp,
+          pure_subject_id: subject.id,
         };
       });
 
-      if (subjects.length > 0) {
-        await trx.batchInsert('subjects', subjects, 100);
-        console.log(`   ✅ Inserted ${subjects.length} subjects\n`);
-      }
+      const all_questionsArr = Object.values(data)
+        .map((par_question) => {
+          return par_question.questions.data.map((question) => ({
+            ...question,
+            subject_id: par_question.lesson_info.id,
+          }));
+        })
+        .flat()
+        .sort((a, b) => a.id - b.id);
 
-      // Step 2: Insert Files (no duplicates)
-      console.log('📁 Inserting files...');
-      const filesMap = new Map();
-      const files = [];
-
-      Object.values(data).forEach((lesson) => {
-        lesson.questions?.data?.forEach((q) => {
-          if (q.photo && q.photo !== 'null' && !filesMap.has(q.photo)) {
-            const id = uuidv4();
-            filesMap.set(q.photo, id);
-
-            files.push({
-              id,
-              type: 'image',
-              name: q.photo,
-              size: 0,
-              bucket_name: 'rulionline-photos',
-              path: `/photos/${q.photo}`,
-              is_deleted: false,
-              created_at: timestamp,
-              updated_at: timestamp,
-            });
-          }
-        });
-      });
-
-      if (files.length > 0) {
-        await trx.batchInsert('files', files, 100);
-        console.log(`   ✅ Inserted ${files.length} files\n`);
-      }
-
-      // Step 3: Insert Tickets (no duplicates)
-      console.log('🎫 Inserting tickets...');
-      const ticketsMap = new Map();
-      const tickets = [];
-
-      Object.values(data).forEach((lesson) => {
-        lesson.questions?.data?.forEach((q) => {
-          if (q.bilet_id && !ticketsMap.has(q.bilet_id)) {
-            const id = uuidv4();
-            const timestamp = new Date(Date.now() + q.bilet_id * 1000);
-
-            ticketsMap.set(q.bilet_id, id);
-            tickets.push({
-              id,
-              name: `Bilet ${q.bilet_id}`,
-              is_deleted: false,
-              created_at: timestamp,
-              updated_at: timestamp,
-            });
-          }
-        });
-      });
-
-      if (tickets.length > 0) {
-        await trx.batchInsert('tickets', tickets, 100);
-        console.log(`   ✅ Inserted ${tickets.length} tickets\n`);
-      }
-
-      // Step 4: Insert Questions and Answers
-      console.log('❓ Inserting questions and answers...');
-      const questions = [];
-      const answers = [];
-      let questionIndex = 0;
-
-      Object.values(data).forEach((lesson) => {
-        const subjectId = subjectsMap.get(lesson.lesson_info?.id);
-
-        lesson.questions?.data?.forEach((q) => {
-          const questionId = uuidv4();
-          const timestamp = new Date(Date.now() + questionIndex * 1000);
-
-          // Insert question
-          questions.push({
-            id: questionId,
-            ticket_id: ticketsMap.get(q.bilet_id) || null,
-            subject_id: subjectId || null,
-            title: {
-              oz: q.question?.oz || '',
-              uz: q.question?.uz || '',
-              ru: q.question?.ru || '',
-            },
-            file_id: filesMap.get(q.photo) || null,
+      const ticketsArr = Array.from(new Set(all_questionsArr.map((question) => question.bilet_id)))
+        .sort((a, b) => a - b)
+        .map((ticketId) => {
+          const timestamp = new Date(Date.now() + ticketId * 1000);
+          const id = uuidv4();
+          return {
+            id,
+            name: `Bilet ${ticketId}`,
             is_deleted: false,
             created_at: timestamp,
             updated_at: timestamp,
-          });
-
-          // Insert answers
-          if (q.answers?.answer) {
-            const correctIndex = q.answers.status || 1;
-            const ozAnswers = q.answers.answer.oz || [];
-            const uzAnswers = q.answers.answer.uz || [];
-            const ruAnswers = q.answers.answer.ru || [];
-            const maxLength = Math.max(ozAnswers.length, uzAnswers.length, ruAnswers.length);
-
-            for (let i = 0; i < maxLength; i++) {
-              answers.push({
-                id: uuidv4(),
-                question_id: questionId,
-                is_correct: i + 1 === correctIndex,
-                title: {
-                  oz: ozAnswers[i] || '',
-                  uz: uzAnswers[i] || '',
-                  ru: ruAnswers[i] || '',
-                },
-                is_deleted: false,
-                created_at: timestamp,
-                updated_at: timestamp,
-              });
-            }
-          }
-
-          questionIndex++;
+            pure_ticket_id: ticketId,
+          };
         });
+
+      const filesArr = Array.from(new Set(all_questionsArr.map((question) => question.photo)))
+        .sort((a, b) => a - b)
+        .filter((photoName) => photoName !== null)
+        .map((photoName, index) => {
+          const timestamp = new Date(Date.now() + index * 1000);
+          const id = uuidv4();
+          return {
+            id,
+            type: 'image/png',
+            name: photoName,
+            size: 0,
+            bucket_name: 'images',
+            path: `/images/photos/${photoName}`,
+            is_deleted: false,
+            created_at: timestamp,
+            updated_at: timestamp,
+          };
+        });
+
+      let answersArr = [];
+      const questionsArr = all_questionsArr.map((question) => {
+        const questionTimestamp = new Date(Date.now() + question.id * 1000);
+        const questionId = uuidv4();
+
+        const ticketId = ticketsArr.find(
+          (ticket) => ticket.pure_ticket_id == question.bilet_id,
+        )?.id;
+        const subjectId = subjectsArr.find(
+          (subject) => subject.pure_subject_id == question.subject_id,
+        )?.id;
+
+        const fileId = filesArr.find((file) => file.name == question.photo)?.id || null;
+
+        if (!ticketId || !subjectId) {
+          throw new Error(`Question ${question.id} not migrated`);
+        }
+
+        // Answers data
+        if (question.answers && question.answers.answer) {
+          const answers = question.answers.answer;
+          const correctIndex = question.answers.status || 1;
+
+          const ozAnswers = answers.oz || [];
+          const uzAnswers = answers.uz || [];
+          const ruAnswers = answers.ru || [];
+
+          const maxLength = Math.max(ozAnswers.length, uzAnswers.length, ruAnswers.length);
+
+          for (let i = 0; i < maxLength; i++) {
+            const answerId = uuidv4();
+            const isCorrect = i + 1 === correctIndex;
+
+            const titleJson = {
+              oz: ozAnswers[i] || '',
+              uz: uzAnswers[i] || '',
+              ru: ruAnswers[i] || '',
+            };
+
+            const answerTimestamp = new Date(Date.now() + i * 1000);
+            answersArr.push({
+              id: answerId,
+              question_id: questionId,
+              is_correct: isCorrect,
+              title: titleJson,
+              is_deleted: false,
+              created_at: answerTimestamp,
+              updated_at: answerTimestamp,
+            });
+          }
+        }
+
+        const titleJson = JSON.stringify(question.question);
+
+        return {
+          id: questionId,
+          ticket_id: ticketId,
+          subject_id: subjectId,
+          title: titleJson,
+          file_id: fileId,
+          is_deleted: false,
+          created_at: questionTimestamp,
+          updated_at: questionTimestamp,
+        };
       });
 
-      if (questions.length > 0) {
-        await trx.batchInsert('questions', questions, 100);
-        console.log(`   ✅ Inserted ${questions.length} questions`);
-      }
+      const subject = subjectsArr.map((subject) => {
+        delete subject.pure_subject_id;
+        return subject;
+      });
 
-      if (answers.length > 0) {
-        await trx.batchInsert('answers', answers, 500);
-        console.log(`   ✅ Inserted ${answers.length} answers\n`);
-      }
+      const ticket = ticketsArr.map((ticket) => {
+        delete ticket.pure_ticket_id;
+        return ticket;
+      });
 
-      console.log('✅ Transaction completed!\n');
+      const file = filesArr.map((file) => {
+        return file;
+      });
+
+      const answer = answersArr.map((answer) => {
+        return answer;
+      });
+
+      const question = questionsArr.map((question) => {
+        return question;
+      });
+
+      await trx.batchInsert('subjects', subject);
+      await trx.batchInsert('tickets', ticket);
+      await trx.batchInsert('files', file);
+      await trx.batchInsert('questions', question);
+      await trx.batchInsert('answers', answer);
     });
-
-    // Summary
-    console.log('📊 Migration Summary:');
-    console.log('========================');
-    console.log('✅ All data migrated successfully!');
-    console.log('🎉 Migration completed!\n');
   } catch (error) {
     console.error('❌ Migration failed:', error.message);
     console.error('🔄 Transaction rolled back\n');

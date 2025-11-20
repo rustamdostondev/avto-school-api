@@ -32,6 +32,11 @@ async function main() {
   await prisma.permissions.deleteMany();
   await prisma.roles.deleteMany();
   await prisma.users.deleteMany();
+  await prisma.subjects.deleteMany();
+  await prisma.tickets.deleteMany();
+  await prisma.files.deleteMany();
+  await prisma.answers.deleteMany();
+  await prisma.questions.deleteMany();
 
   // Users
   const userEmailMap: Record<string, string> = {
