@@ -6,17 +6,31 @@ import {
   IsOptional,
   IsString,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 export class CreateUserDto {
   @ApiProperty({
     example: 'doston1@gmail.com',
-    description: 'User email address',
+    description: 'User email address (optional if phoneNumber is provided)',
+    required: false,
   })
-  @IsString()
+  @IsOptional()
+  @ValidateIf((o) => !o.phoneNumber)
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  email?: string;
+
+  @ApiProperty({
+    example: '+998901234567',
+    description: 'User phone number (optional if email is provided)',
+    required: false,
+  })
+  @IsOptional()
+  @ValidateIf((o) => !o.email)
+  @IsNotEmpty()
+  @IsString()
+  phoneNumber?: string;
 
   @ApiProperty({
     example: 'John',

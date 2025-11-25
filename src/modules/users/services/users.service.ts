@@ -21,6 +21,7 @@ export class UsersService {
     id: true,
     fullName: true,
     email: true,
+    phoneNumber: true,
     role: true,
     isVerified: true,
     createdAt: true,
@@ -39,7 +40,8 @@ export class UsersService {
           OR: [
             { fullName: { contains: search, mode: Prisma.QueryMode.insensitive } },
             { email: { contains: search, mode: Prisma.QueryMode.insensitive } },
-          ],
+            { phoneNumber: { contains: search, mode: Prisma.QueryMode.insensitive } },
+          ].filter((condition) => Object.keys(condition).length > 0),
         }
       : {};
 
@@ -85,13 +87,28 @@ export class UsersService {
   }
 
   async create(data: ICreateUserDto) {
-    // Check email uniqueness
+    // Validate that either email or phoneNumber is provided
+    if (!data.email && !data.phoneNumber) {
+      throw new BadRequestException('Either email or phone number is required');
+    }
+
+    // Check email and phone number uniqueness
     const existingUser = await this.prisma.users.findFirst({
-      where: { email: data.email, isDeleted: false },
+      where: {
+        OR: [
+          data.email ? { email: data.email, isDeleted: false } : {},
+          data.phoneNumber ? { phoneNumber: data.phoneNumber, isDeleted: false } : {},
+        ].filter((condition) => Object.keys(condition).length > 0),
+      },
     });
 
     if (existingUser) {
-      throw new BadRequestException('email already exists');
+      if (existingUser.email === data.email) {
+        throw new BadRequestException('Email already exists');
+      }
+      if (existingUser.phoneNumber === data.phoneNumber) {
+        throw new BadRequestException('Phone number already exists');
+      }
     }
 
     // Hash password if provided

@@ -1,15 +1,28 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDefined, IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsDefined, IsEmail, IsNotEmpty, IsOptional, IsString, ValidateIf } from 'class-validator';
 
 export class RegisterDto {
   @ApiProperty({
     example: 'doston1@gmail.com',
-    description: 'User email address',
+    description: 'User email address (optional if phoneNumber is provided)',
+    required: false,
   })
-  @IsString()
+  @IsOptional()
+  @ValidateIf((o) => !o.phoneNumber)
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  email?: string;
+
+  @ApiProperty({
+    example: '+998901234567',
+    description: 'User phone number (optional if email is provided)',
+    required: false,
+  })
+  @IsOptional()
+  @ValidateIf((o) => !o.email)
+  @IsNotEmpty()
+  @IsString()
+  phoneNumber?: string;
 
   @ApiProperty({
     example: 'John',
@@ -31,12 +44,25 @@ export class RegisterDto {
 export class LoginDto {
   @ApiProperty({
     example: 'doston1@gmail.com',
-    description: 'User email address',
+    description: 'User email address (optional if phoneNumber is provided)',
+    required: false,
   })
-  @IsString()
+  @IsOptional()
+  @ValidateIf((o) => !o.phoneNumber)
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  email?: string;
+
+  @ApiProperty({
+    example: '+998901234567',
+    description: 'User phone number (optional if email is provided)',
+    required: false,
+  })
+  @IsOptional()
+  @ValidateIf((o) => !o.email)
+  @IsNotEmpty()
+  @IsString()
+  phoneNumber?: string;
 
   @ApiProperty({
     example: 'dos130230',
@@ -104,12 +130,25 @@ export class SendOptDto {
 export class ForgotPasswordDto {
   @ApiProperty({
     example: 'doston1@gmail.com',
-    description: 'User email address to send reset code',
+    description: 'User email address to send reset code (optional if phoneNumber is provided)',
+    required: false,
   })
-  @IsString()
+  @IsOptional()
+  @ValidateIf((o) => !o.phoneNumber)
   @IsNotEmpty()
   @IsEmail()
-  email: string;
+  email?: string;
+
+  @ApiProperty({
+    example: '+998901234567',
+    description: 'User phone number to send reset code (optional if email is provided)',
+    required: false,
+  })
+  @IsOptional()
+  @ValidateIf((o) => !o.email)
+  @IsNotEmpty()
+  @IsString()
+  phoneNumber?: string;
 }
 
 export class VerifyResetCodeDto {

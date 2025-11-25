@@ -6,7 +6,10 @@ import { USER_BLOCK_TIME_FOR_AUTH, expireTime, randomNumber, randomString } from
 export class OneTimeCodeService {
   constructor(private readonly prisma: PrismaService) {}
 
-  generate({ email, userId, otp }, trx: PrismaService = this.prisma) {
+  generate(
+    { email, userId, otp }: { email: string; userId: string; otp?: number },
+    trx: PrismaService = this.prisma,
+  ) {
     if (!otp) {
       otp = randomNumber();
     }
