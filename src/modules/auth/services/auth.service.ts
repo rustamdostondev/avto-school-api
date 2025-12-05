@@ -155,6 +155,15 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // Validate access period
+    const now = new Date();
+    if (
+      (user.accessStartAt && user.accessStartAt > now) ||
+      (user.accessEndAt && user.accessEndAt < now)
+    ) {
+      throw new ForbiddenException('Your permission has expired');
+    }
+
     return this.prisma.$transaction(async (trx: PrismaService) => {
       // Update last login
       await trx.users.update({
@@ -227,7 +236,7 @@ export class AuthService {
   logout(user: IUserSession): Promise<null> {
     return this.prisma.$transaction(async (trx: PrismaService) => {
       await trx.refreshToken.updateMany({
-        where: { userId: user.id, isDeleted: false },
+        where: { userId: user.id, isDeleted: false, token: user.token },
         data: {
           isDeleted: true,
           deletedAt: new Date(),
@@ -248,6 +257,7 @@ export class AuthService {
           updatedBy: user.id,
         },
       });
+
       return null;
     });
   }
@@ -298,28 +308,33 @@ export class AuthService {
     trx: Prisma.TransactionClient = this.prisma,
   ): Promise<ITokens> {
     const sessionId = uuidv4();
-    delete user.password;
-    const payload: ITokenPayload = { ...user, sessionId };
-
     const { id: userId } = user;
 
+    // Minimal safe payload
+    const payload: ITokenPayload = {
+      id: userId,
+      email: user.email,
+      sessionId,
+    };
+
+    // Get last 1 session (we keep only 1 previous + new one)
     const activeSessions = await trx.userSessions.findMany({
       where: {
         userId,
         isActive: true,
         isDeleted: false,
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
       take: 2,
     });
 
-    const sessionIdsToNotDelete = activeSessions.map((session) => session.id);
+    const sessionIdsToKeep = activeSessions.map((s) => s.id);
 
+    // Delete ONLY session of the current user
     await trx.userSessions.updateMany({
       where: {
-        id: { notIn: sessionIdsToNotDelete },
+        userId, // IMPORTANT FIX
+        id: { notIn: sessionIdsToKeep },
       },
       data: {
         isActive: false,
@@ -334,8 +349,8 @@ export class AuthService {
     // Create new session
     await trx.userSessions.create({
       data: {
-        userId: userId,
-        sessionId: sessionId,
+        userId,
+        sessionId,
         isActive: true,
         lastActivity: new Date(),
         createdBy: userId,
@@ -343,7 +358,7 @@ export class AuthService {
       },
     });
 
-    // Generate access and refresh tokens
+    // Generate tokens
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
         secret: JWT_CONSTANTS.ACCESS_TOKEN_SECRET,
@@ -353,19 +368,16 @@ export class AuthService {
       }),
     ]);
 
-    // Save refresh token - Fixed: should save refreshToken, not accessToken
+    // Save refresh token
     await trx.refreshToken.create({
       data: {
-        userId: userId,
-        token: refreshToken, // Fixed: was accessToken
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        userId,
+        token: refreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
 
-    return {
-      accessToken,
-      refreshToken,
-    };
+    return { accessToken, refreshToken };
   }
 
   async userVerifyInfo(tokenUser: IUserSession) {

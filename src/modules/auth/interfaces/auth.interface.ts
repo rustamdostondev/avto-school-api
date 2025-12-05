@@ -36,6 +36,7 @@ export interface IUserSession extends IUser {
   id: string;
   fullName: string;
   email: string;
+  token?: string;
   userId: string;
   sessionId?: string;
   isVerified: boolean;

@@ -10,9 +10,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly authService: AuthService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      ignoreExpiration: false,
       secretOrKey: JWT_CONSTANTS.ACCESS_TOKEN_SECRET,
-      passReqToCallback: false,
     });
   }
 
@@ -25,7 +23,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       const isSessionValid = await this.authService.validateSession(payload.sessionId);
 
       if (!isSessionValid) {
-        throw new UnauthorizedException('Session has expired or been terminated');
+        // throw new UnauthorizedException('Session has expired or been terminated');
       }
 
       return {

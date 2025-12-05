@@ -123,6 +123,7 @@ export class UsersService {
   }
 
   async update(id: string, data: IUpdateUserDto, createUser: IUserSession) {
+    return createUser;
     // Check if user exists
     const existingUser = await this.prisma.users.findUnique({
       where: { id, isDeleted: false },

@@ -23,13 +23,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     context: ExecutionContext,
   ): TUser {
     const request = context.switchToHttp().getRequest();
+    const token = request.headers.authorization?.split(' ')[1];
 
     if (err || !user) {
       throw err || new UnauthorizedException();
     }
 
-    request.user = user;
-
-    return user;
+    return { ...user, token };
   }
 }

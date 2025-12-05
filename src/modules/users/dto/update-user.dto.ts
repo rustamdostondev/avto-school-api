@@ -33,4 +33,14 @@ export class UpdateUserDto {
   @IsOptional()
   @IsBoolean()
   is_verified?: boolean;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsString()
+  accessStartAt?: string;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsString()
+  accessEndAt?: string;
 }
