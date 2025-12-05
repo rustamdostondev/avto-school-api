@@ -367,6 +367,7 @@ export class AuthService {
       id: userId,
       email: user.email,
       sessionId,
+      isVerified: user.isVerified,
     };
 
     // Get last 1 session (we keep only 1 previous + new one)
