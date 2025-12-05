@@ -2,7 +2,8 @@ import { IPermission, IRole } from '@modules/roles/interfaces/role.interface';
 
 export interface IUser {
   id: string;
-  email: string;
+  email?: string;
+  phoneNumber?: string;
   password?: string;
   fullName?: string;
   role?: string;
@@ -16,7 +17,8 @@ export interface IUser {
 }
 
 export interface ICreateUserDto {
-  email: string;
+  email?: string;
+  phoneNumber?: string;
   password: string;
   fullName: string;
   is_active?: boolean;
@@ -27,6 +29,7 @@ export interface ICreateUserDto {
 
 export interface IUpdateUserDto {
   email?: string;
+  phoneNumber?: string;
   password?: string;
   fullName?: string;
   is_active?: boolean;

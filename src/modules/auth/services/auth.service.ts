@@ -31,6 +31,7 @@ import { NODE_ENV } from '@env';
 import { REDIS_DURATION_2_MINS } from '@common/redis/durations';
 import { MailService } from '@common/mail/mail.service';
 import { RedisService } from '@common/redis/redis.service';
+import * as moment from 'moment';
 
 @Injectable()
 export class AuthService {
@@ -43,10 +44,22 @@ export class AuthService {
   ) {}
 
   async register(registerDto: IRegisterDto) {
-    const email = registerDto.email.toLowerCase();
+    // Validate that either email or phoneNumber is provided
+    if (!registerDto.email && !registerDto.phoneNumber) {
+      throw new BadRequestException('Either email or phone number is required');
+    }
 
+    const email = registerDto.email?.toLowerCase();
+    const phoneNumber = registerDto.phoneNumber;
+
+    // Find existing user by email or phone number
     let user = await this.prisma.users.findFirst({
-      where: { email, isDeleted: false },
+      where: {
+        OR: [
+          email ? { email, isDeleted: false } : {},
+          phoneNumber ? { phoneNumber, isDeleted: false } : {},
+        ].filter((condition) => Object.keys(condition).length > 0),
+      },
     });
 
     const hashedPassword = await bcrypt.hash(registerDto.password, 10);
@@ -86,17 +99,44 @@ export class AuthService {
         user = await trx.users.create({
           data: {
             email,
+            phoneNumber,
             fullName: registerDto.fullName,
             password: hashedPassword,
             plainPassword: registerDto.password, // Store plain password for admin access
             authMethod: 'local',
             provider: 'local',
             role: 'user',
-            isVerified: false,
+            isVerified: phoneNumber ? true : false, // Phone users are auto-verified
+            accessEndAt: moment().add(1, 'month').toDate(),
           },
         });
       }
 
+      // If phone number registration, return tokens directly (no OTP needed)
+      if (phoneNumber) {
+        // Update last login
+        await trx.users.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date() },
+        });
+
+        delete user.password;
+        const tokens = await this.generateTokens(user, trx);
+        return {
+          ...tokens,
+          user: {
+            id: user.id,
+            fullName: user.fullName,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+            isVerified: user.isVerified,
+            authMethod: user.authMethod,
+            provider: user.provider,
+          },
+        };
+      }
+
+      // Email registration - continue with OTP flow
       // Increment verification attempt
       await trx.users.update({
         where: { id: user.id },
@@ -108,7 +148,7 @@ export class AuthService {
       if (NODE_ENV !== 'production') customOtp = 111111;
       if (email === 'example@doston.me') customOtp = 123456;
 
-      // Generate OTP
+      // Generate OTP for email only
       const otpData = await this.oneTimeCodeService.generate(
         {
           email,
@@ -136,8 +176,19 @@ export class AuthService {
   }
 
   async login(loginDto: ILoginDto): Promise<ITokens> {
+    // Validate that either email or phoneNumber is provided
+    if (!loginDto.email && !loginDto.phoneNumber) {
+      throw new BadRequestException('Either email or phone number is required');
+    }
+
+    // Find user by email or phone number
     const user = await this.prisma.users.findFirst({
-      where: { email: loginDto.email, isDeleted: false },
+      where: {
+        OR: [
+          loginDto.email ? { email: loginDto.email, isDeleted: false } : {},
+          loginDto.phoneNumber ? { phoneNumber: loginDto.phoneNumber, isDeleted: false } : {},
+        ].filter((condition) => Object.keys(condition).length > 0),
+      },
     });
 
     if (!user) {
@@ -179,6 +230,7 @@ export class AuthService {
           id: user.id,
           fullName: user.fullName,
           email: user.email,
+          phoneNumber: user.phoneNumber,
           isVerified: user.isVerified,
           authMethod: user.authMethod,
           provider: user.provider,

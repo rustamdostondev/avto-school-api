@@ -5,12 +5,23 @@ export class UpdateUserDto {
   @ApiProperty({
     example: 'doston1@gmail.com',
     description: 'User email address',
+    required: false,
   })
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
-  @IsOptional()
   @IsEmail()
   email?: string;
+
+  @ApiProperty({
+    example: '+998901234567',
+    description: 'User phone number',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  phoneNumber?: string;
 
   @ApiProperty()
   @IsOptional()
