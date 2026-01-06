@@ -15,7 +15,7 @@ import {
   ITokens,
   IUserSession,
 } from '../interfaces/auth.interface';
-import { JWT_CONSTANTS } from '@common/constants';
+import { JWT_CONSTANTS, ROLES } from '@common/constants';
 import { IUser } from '@modules/users/interfaces/user.interface';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma, Users } from '@prisma/client';
@@ -209,8 +209,9 @@ export class AuthService {
     // Validate access period
     const now = new Date();
     if (
-      (user.accessStartAt && user.accessStartAt > now) ||
-      (user.accessEndAt && user.accessEndAt < now)
+      user.role === ROLES.USER &&
+      ((user.accessStartAt && user.accessStartAt > now) ||
+        (user.accessEndAt && user.accessEndAt < now))
     ) {
       throw new ForbiddenException('Your permission has expired');
     }
