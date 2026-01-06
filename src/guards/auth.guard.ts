@@ -20,7 +20,7 @@ export class AuthGuard implements CanActivate {
     }
 
     // Check user access period (skip for admin and super_admin)
-    if (user.role !== ROLES.ADMIN && user.role !== ROLES.SUPER_ADMIN) {
+    if (user.role == ROLES.USER) {
       await this.checkUserAccessPeriod(user.id);
     }
 
